@@ -9,7 +9,7 @@
   <a href="https://www.npmjs.com/package/@nicholasxdavis/playhouse-cli">
     <img src="https://img.shields.io/npm/v/@nicholasxdavis/playhouse-cli?style=for-the-badge&label=Version&color=14949c" alt="npm version">
   </a>
-  <a href="https://github.com/nicholasxdavis/playhouse-cli/releases/tag/v0.1.0">
+  <a href="https://github.com/nicholasxdavis/playhouse-cli/releases/latest">
     <img src="https://img.shields.io/github/v/release/nicholasxdavis/playhouse-cli?style=for-the-badge&label=Release&color=14949c" alt="GitHub Release">
   </a>
   <a href="https://github.com/nicholasxdavis/playhouse-cli">
@@ -64,11 +64,11 @@ Set `PLAYHOUSE_INSTALL_STRICT=1` to fail `npm install` when tool install fails.
 |--------|---------|
 | npm (primary) | `npm i -g @nicholasxdavis/playhouse-cli` |
 | npx | `npx @nicholasxdavis/playhouse-cli init` |
-| GitHub Release | [v0.1.0 binaries](https://github.com/nicholasxdavis/playhouse-cli/releases/tag/v0.1.0) |
+| GitHub Release | [Latest binaries](https://github.com/nicholasxdavis/playhouse-cli/releases/latest) |
 | cargo (developers) | `cargo install --path . --force` |
 | manual binary | set `PLAYHOUSE_BIN` or `PLAYHOUSE_SKIP_DOWNLOAD=1` |
 
-The npm package downloads the native binary (~12 MB) from GitHub Releases on `postinstall`. Current release: **v0.1.0**.
+The npm package downloads the native binary (~12 MB) from GitHub Releases on `postinstall`. Current release: **v0.1.1**.
 
 **From source:**
 
@@ -82,12 +82,14 @@ cargo install --path . --force
 Local npm dev loop:
 
 ```bash
-cargo build --release && cd packages/playhouse && npm run link-local
+cargo build --release
+cd packages/playhouse && npm run link-local   # bash
+# PowerShell 5.x: cd packages/playhouse; npm run link-local
 ```
 
 **CI:** [GitHub Actions](https://github.com/nicholasxdavis/playhouse-cli/actions) runs `cargo test`, npm smoke, and `playhouse verify` on Ubuntu, macOS, and Windows.
 
-**Releases:** push tag `v0.1.0` (must match `Cargo.toml` and `packages/playhouse/package.json`) to publish binaries for npm postinstall.
+**Releases:** push tag `v0.1.1` (must match `Cargo.toml` and `packages/playhouse/package.json`) to publish binaries for npm postinstall.
 
 ## Quick start
 
@@ -182,7 +184,7 @@ playhouse config set package_manager pnpm
 | Resource | URL |
 |----------|-----|
 | Repository | https://github.com/nicholasxdavis/playhouse-cli |
-| Release v0.1.0 | https://github.com/nicholasxdavis/playhouse-cli/releases/tag/v0.1.0 |
+| Release v0.1.1 | https://github.com/nicholasxdavis/playhouse-cli/releases/tag/v0.1.1 |
 | npm package | https://www.npmjs.com/package/@nicholasxdavis/playhouse-cli |
 | Issues | https://github.com/nicholasxdavis/playhouse-cli/issues |
 

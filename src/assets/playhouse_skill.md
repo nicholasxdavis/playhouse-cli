@@ -108,6 +108,18 @@ Grades: 90+ Production Ready, 75+ Good, 60+ Fair, below 60 needs work.
 
 Always check `exitCode` in JSON output.
 
+## Shell commands (agents on Windows)
+
+PowerShell 5.x does not support `&&`. Never run `cd path && playhouse ...`.
+
+Preferred:
+
+```text
+playhouse -C "/path/to/project" agent status --json
+```
+
+Or set your shell `working_directory` to the project root. See the `shell` block in `playhouse agent --json`.
+
 ## URL for browser audits
 
 Lighthouse and Arkenar need a URL. Resolution order:

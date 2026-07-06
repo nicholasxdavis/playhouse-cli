@@ -3,6 +3,7 @@ mod audit;
 mod baseplates;
 mod cli;
 mod cmd;
+mod shell;
 mod config;
 mod config_cli;
 mod detect;

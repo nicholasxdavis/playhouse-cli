@@ -47,6 +47,7 @@ pub fn manifest(workspace: &str) -> Value {
         "nextActions": next_actions(workspace, &settings, &checks, &last_score, &profile),
         "handoffChecklist": handoff_checklist(&settings, &ws_config, &profile),
         "workflow": agent_workflow(workspace, &settings, &ws_config, &profile),
+        "shell": crate::shell::support_block(workspace),
         "configKeys": "Run `playhouse config schema --json` for settable keys",
     })
 }
@@ -61,9 +62,10 @@ pub fn status(workspace: &str) -> Value {
     let pass = checks.iter().filter(|c| c.status == CheckStatus::Pass).count();
     let fail = checks.iter().filter(|c| c.status == CheckStatus::Fail).count();
     let warn = checks.iter().filter(|c| c.status == CheckStatus::Warn).count();
+    let ready = fail == 0 && !has_blocking_tool_gaps(&checks, &profile);
 
     json!({
-        "ready": fail == 0,
+        "ready": ready,
         "stack": profile.stack.as_str(),
         "functionalRunner": profile.functional_runner.as_str(),
         "browserAudits": profile.browser_audits,
@@ -71,7 +73,7 @@ pub fn status(workspace: &str) -> Value {
         "toolsWarn": warn,
         "toolsFail": fail,
         "verifyUrl": url,
-        "lastScore": last_score,
+        "lastScore": last_score.as_ref().map(|l| score_status_json(l)),
         "starPassThreshold": settings.star_pass_threshold,
         "initialized": ws.initialized,
         "nextActions": next_actions(workspace, &settings, &checks, &last_score, &profile),
@@ -147,8 +149,9 @@ pub fn build_handoff_json(
         out["playhouseScore"] = json!(report.score);
         out["exitCode"] = json!(report.exit_code);
         out["passed"] = json!(report.exit_code == 0);
-    } else if let Some(score) = load_last_score(workspace) {
-        out["playhouseScore"] = json!(score);
+    } else if let Some(loaded) = load_last_score(workspace) {
+        out["playhouseScore"] = json!(loaded.score);
+        out["scoreMeta"] = score_status_json(&loaded);
     }
 
     out
@@ -164,7 +167,9 @@ pub fn save_handoff_json(
         fs::create_dir_all(parent)?;
     }
     let doc = build_handoff_json(workspace, settings, audit);
-    fs::write(&path, serde_json::to_string_pretty(&doc).unwrap_or_default())?;
+    let json_str = serde_json::to_string_pretty(&doc)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    fs::write(&path, json_str)?;
     Ok(path)
 }
 
@@ -188,7 +193,13 @@ pub fn build_brief_text(
     let last_score = load_last_score(workspace);
     let stars_line = last_score
         .as_ref()
-        .map(|s| format!("Last score: {}/100 ({})", s.stars, s.grade))
+        .map(|l| {
+            let stale = if l.stale { " (stale - re-run verify)" } else { "" };
+            format!(
+                "Last score: {}/100 ({}){}",
+                l.score.stars, l.score.grade, stale
+            )
+        })
         .unwrap_or_else(|| "Last score: none (run playhouse verify)".into());
 
     let lh = settings.lighthouse_threshold * 100.0;
@@ -380,14 +391,39 @@ fn urls_block(workspace: &str, settings: &PlayhouseSettings, ws: &WorkspaceConfi
     })
 }
 
-fn score_block(settings: &PlayhouseSettings, last: &Option<PlayhouseScore>) -> Value {
+fn score_block(settings: &PlayhouseSettings, last: &Option<LoadedScore>) -> Value {
     json!({
         "scale": "0-100",
         "passThreshold": settings.star_pass_threshold,
         "reportPath": ".playhouse/reports/score.json",
         "methodology": crate::score::METHODOLOGY,
-        "last": last,
+        "last": last.as_ref().map(score_status_json),
     })
+}
+
+fn score_status_json(loaded: &LoadedScore) -> Value {
+    json!({
+        "score": loaded.score,
+        "generatedAt": loaded.generated_at,
+        "stale": loaded.stale,
+    })
+}
+
+fn has_blocking_tool_gaps(checks: &[HealthCheck], profile: &ProjectProfile) -> bool {
+    let trivy_bad = checks
+        .iter()
+        .any(|c| c.name.contains("Trivy") && c.status != CheckStatus::Pass);
+    let playwright_bad = profile.needs_playwright()
+        && checks
+            .iter()
+            .any(|c| c.name.contains("Playwright") && c.status != CheckStatus::Pass);
+    trivy_bad || playwright_bad
+}
+
+struct LoadedScore {
+    score: PlayhouseScore,
+    generated_at: Option<String>,
+    stale: bool,
 }
 
 fn read_order(workspace: &str, settings: &PlayhouseSettings, ws: &WorkspaceConfig) -> Vec<Value> {
@@ -443,7 +479,7 @@ fn next_actions(
     workspace: &str,
     settings: &PlayhouseSettings,
     checks: &[HealthCheck],
-    last_score: &Option<PlayhouseScore>,
+    last_score: &Option<LoadedScore>,
     profile: &ProjectProfile,
 ) -> Vec<Value> {
     let mut actions = Vec::new();
@@ -518,15 +554,20 @@ fn next_actions(
             "action": "playhouse verify --json",
             "reason": "No score report yet",
         })),
-        Some(s) if !s.passed => actions.push(json!({
+        Some(s) if s.stale => actions.push(json!({
+            "priority": "medium",
+            "action": "playhouse verify --json",
+            "reason": "Last score is stale (older than 7 days or missing timestamp)",
+        })),
+        Some(s) if !s.score.passed => actions.push(json!({
             "priority": "high",
             "action": "playhouse verify --json",
-            "reason": format!("Last score {}/100 below pass threshold", s.stars),
+            "reason": format!("Last score {}/100 below pass threshold", s.score.stars),
         })),
         Some(s) => actions.push(json!({
             "priority": "low",
             "action": "playhouse agent handoff --json",
-            "reason": format!("Last score {}/100 passed - ready for handoff refresh", s.stars),
+            "reason": format!("Last score {}/100 passed - ready for handoff refresh", s.score.stars),
         })),
     }
 
@@ -674,8 +715,8 @@ fn recipes(_workspace: &str, url: &Option<String>) -> Value {
 
 fn commands_reference() -> Value {
     json!([
-        { "cmd": "playhouse agent [--json]", "desc": "Full agent manifest" },
-        { "cmd": "playhouse agent status [--json]", "desc": "Quick health and next actions" },
+        { "cmd": "playhouse [-C DIR] agent [--json]", "desc": "Full agent manifest (-C sets workspace without cd)" },
+        { "cmd": "playhouse [-C DIR] agent status [--json]", "desc": "Quick health and next actions" },
         { "cmd": "playhouse agent plan [--json]", "desc": "Phased workflow for this workspace" },
         { "cmd": "playhouse agent handoff [--url URL] [--json]", "desc": "Run verify and write handoff bundle" },
         { "cmd": "playhouse config [--json]", "desc": "Show all settings" },
@@ -733,11 +774,29 @@ fn agent_workflow(
     })
 }
 
-fn load_last_score(workspace: &str) -> Option<PlayhouseScore> {
+fn load_last_score(workspace: &str) -> Option<LoadedScore> {
     let path = tools::playhouse_dir(workspace).join("reports").join("score.json");
     let content = fs::read_to_string(path).ok()?;
     let v: Value = serde_json::from_str(&content).ok()?;
-    serde_json::from_value(v.get("playhouseScore")?.clone()).ok()
+    let score: PlayhouseScore = serde_json::from_value(v.get("playhouseScore")?.clone()).ok()?;
+    let generated_at = v
+        .get("generatedAt")
+        .and_then(|g| g.as_str())
+        .map(String::from);
+    let stale = score_is_stale(generated_at.as_deref());
+    Some(LoadedScore {
+        score,
+        generated_at,
+        stale,
+    })
+}
+
+fn score_is_stale(generated_at: Option<&str>) -> bool {
+    let Some(ts) = generated_at.and_then(|s| s.parse::<u64>().ok()) else {
+        return true;
+    };
+    let now = unix_now().parse::<u64>().unwrap_or(0);
+    now.saturating_sub(ts) > 7 * 24 * 3600
 }
 
 fn unix_now() -> String {

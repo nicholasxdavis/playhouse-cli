@@ -21,10 +21,7 @@ use crate::tui;
 use crate::workspace;
 
 pub async fn run(cli: Cli) -> i32 {
-    let workspace = std::env::current_dir()
-        .unwrap_or_else(|_| std::path::PathBuf::from("."))
-        .to_string_lossy()
-        .to_string();
+    let workspace = resolve_workspace(cli.workspace.as_deref());
 
     let settings = config::load_settings();
     workspace::maybe_auto_init(&workspace, &settings);
@@ -75,4 +72,21 @@ pub async fn run(cli: Cli) -> i32 {
 
         Some(Commands::Upgrade) => upgrade_cmd::run(&ctx),
     }
+}
+
+fn resolve_workspace(flag: Option<&str>) -> String {
+    if let Some(path) = flag {
+        let p = std::path::Path::new(path);
+        if p.is_absolute() {
+            return p.to_string_lossy().into_owned();
+        }
+        if let Ok(cwd) = std::env::current_dir() {
+            return cwd.join(p).to_string_lossy().into_owned();
+        }
+        return path.to_string();
+    }
+    std::env::current_dir()
+        .unwrap_or_else(|_| std::path::PathBuf::from("."))
+        .to_string_lossy()
+        .to_string()
 }

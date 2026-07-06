@@ -111,6 +111,48 @@ fn playwright_delegates_to_cargo_on_rust_fixture() {
 }
 
 #[test]
+fn agent_manifest_includes_shell_support() {
+    let stdout = run_ok(&["agent", "--json"], &repo_root());
+    let v: serde_json::Value = serde_json::from_str(&stdout).expect("valid JSON");
+    assert!(v.get("shell").is_some());
+    assert!(v["shell"]["workspaceFlag"]["flag"].as_str() == Some("-C"));
+}
+
+#[test]
+fn workspace_flag_runs_from_fixture() {
+    let fixture = repo_root().join("tests/fixtures/rust-app");
+    let out = Command::new(playhouse_bin())
+        .args(["-C", fixture.to_str().unwrap(), "functional", "--json"])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "playhouse -C functional failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let v: serde_json::Value =
+        serde_json::from_str(&String::from_utf8_lossy(&out.stdout)).expect("valid JSON");
+    assert_eq!(v["runner"], "cargo-test");
+}
+
+#[test]
+fn doctor_json_on_rust_fixture() {
+    let fixture = repo_root().join("tests/fixtures/rust-app");
+    let stdout = run_ok(&["doctor", "--json"], &fixture);
+    let v: serde_json::Value = serde_json::from_str(&stdout).expect("valid JSON");
+    assert!(v.as_array().is_some());
+}
+
+#[test]
+fn agent_status_json_on_rust_fixture() {
+    let fixture = repo_root().join("tests/fixtures/rust-app");
+    let stdout = run_ok(&["agent", "status", "--json"], &fixture);
+    let v: serde_json::Value = serde_json::from_str(&stdout).expect("valid JSON");
+    assert!(v.get("ready").is_some());
+    assert!(v.get("doctor").is_some());
+}
+
+#[test]
 fn upgrade_command_json() {
     let stdout = run_ok(&["upgrade", "--json"], &repo_root());
     let v: serde_json::Value = serde_json::from_str(&stdout).expect("valid JSON");

@@ -36,21 +36,22 @@ pub async fn execute(workspace: &str) -> (i32, serde_json::Value) {
 
     let scan = crate::workspace::scan_root_str(workspace);
 
-    let result = async_cmd(&trivy)
-        .args([
-            "fs",
-            "--scanners",
-            "vuln,secret",
-            "--severity",
-            &severity,
-            "--format",
-            "json",
-            "--quiet",
-            ".",
-        ])
-        .current_dir(&scan)
-        .output()
-        .await;
+    let result = {
+        let mut cmd = async_cmd(&trivy);
+        cmd.args([
+                "fs",
+                "--scanners",
+                "vuln,secret",
+                "--severity",
+                &severity,
+                "--format",
+                "json",
+                "--quiet",
+                ".",
+            ])
+            .current_dir(&scan);
+        crate::cmd::output_with_timeout(&mut cmd).await
+    };
 
     match result {
         Ok(out) => {

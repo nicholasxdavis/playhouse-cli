@@ -43,6 +43,31 @@ Always prefer `--json` on every command. Parse structured output; do not guess f
 5. **Do not commit secrets** flagged by Trivy.
 6. **Follow `nextActions`** from `playhouse agent status --json` when unsure what to do next.
 7. **Do not invent commands** — only use what is documented here or in `playhouse agent --json`.
+8. **No `cd && playhouse`** — use `-C`/`--workspace` or set the shell `working_directory` (see Shell commands below).
+
+---
+
+## Shell commands (Windows PowerShell 5.x)
+
+Do **not** chain with `&&` in PowerShell 5.x. This fails:
+
+```text
+cd "C:\project" && playhouse doctor --json
+```
+
+Use one of these instead:
+
+```text
+playhouse -C "C:\project" doctor --json
+```
+
+Or set the shell tool `working_directory` to the project root and run:
+
+```text
+playhouse doctor --json
+```
+
+The agent manifest (`playhouse agent --json`) includes a `shell` block with platform notes and examples.
 
 ---
 

@@ -105,6 +105,19 @@ where
         skipped: false,
     });
 
+    if doctor_fail {
+        progress(AuditProgress::Computing {
+            label: "Toolchain failed — skipping engines".into(),
+        });
+        let playhouse_score = score::compute(&[], Some(&doctor), settings);
+        return AuditReport {
+            exit_code: 5,
+            score: playhouse_score,
+            engines: vec![],
+            doctor,
+        };
+    }
+
     let target_url = url
         .map(String::from)
         .or_else(|| workspace::resolve_verify_url(workspace, settings));
@@ -176,10 +189,7 @@ where
             label: format!("Running {runner_label} tests…"),
         });
         let (code, metrics) = engines::functional::execute(workspace, &profile, None).await;
-        let no_tests = metrics.get("noTests").and_then(|v| v.as_bool()).unwrap_or(false);
-        let passed = metrics["stats"]["passed"].as_u64().unwrap_or(0);
-        let failed = metrics["stats"]["failed"].as_u64().unwrap_or(0);
-        let skipped = metrics["stats"]["skipped"].as_u64().unwrap_or(0);
+        let (passed, failed, skipped, no_tests) = functional_stats(&metrics);
         engines.push(EngineResult {
             engine: "functional".into(),
             exit_code: code,
@@ -379,6 +389,34 @@ pub struct AuditReport {
     pub score: PlayhouseScore,
     pub engines: Vec<EngineResult>,
     pub doctor: Vec<crate::types::HealthCheck>,
+}
+
+fn functional_stats(metrics: &serde_json::Value) -> (u64, u64, u64, bool) {
+    let no_tests = metrics.get("noTests").and_then(|v| v.as_bool()).unwrap_or(false);
+    let stats = metrics.get("stats");
+    let passed = stats
+        .and_then(|s| s.get("passed"))
+        .and_then(|v| v.as_u64())
+        .or_else(|| {
+            stats
+                .and_then(|s| s.get("expected"))
+                .and_then(|v| v.as_u64())
+        })
+        .unwrap_or(0);
+    let failed = stats
+        .and_then(|s| s.get("failed"))
+        .and_then(|v| v.as_u64())
+        .or_else(|| {
+            stats
+                .and_then(|s| s.get("unexpected"))
+                .and_then(|v| v.as_u64())
+        })
+        .unwrap_or(0);
+    let skipped = stats
+        .and_then(|s| s.get("skipped"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    (passed, failed, skipped, no_tests)
 }
 
 fn print_summary(score: &PlayhouseScore, engines: &[EngineResult]) {

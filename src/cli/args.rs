@@ -14,6 +14,10 @@ pub struct Cli {
     /// Output machine-readable JSON instead of human text
     #[arg(long, global = true)]
     pub json: bool,
+
+    /// Project root (avoids cd && playhouse chains in PowerShell 5.x)
+    #[arg(short = 'C', long = "workspace", global = true, value_name = "DIR")]
+    pub workspace: Option<String>,
 }
 
 #[derive(Subcommand)]

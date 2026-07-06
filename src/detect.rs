@@ -594,6 +594,6 @@ mod tests {
     fn check_playhouse_install_reports_version() {
         let check = check_playhouse_install();
         assert_eq!(check.name, "Playhouse CLI");
-        assert!(check.detail.contains("0.1.0"));
+        assert!(check.detail.contains(env!("CARGO_PKG_VERSION")));
     }
 }

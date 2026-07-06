@@ -64,7 +64,11 @@ pub async fn execute(url: &str, workspace: &str) -> (i32, serde_json::Value) {
         args.push("--enable-js-analysis".into());
     }
 
-    let result = async_cmd(&program).args(&args).output().await;
+    let result = {
+        let mut cmd = async_cmd(&program);
+        cmd.args(&args);
+        crate::cmd::output_with_timeout(&mut cmd).await
+    };
 
     match result {
         Ok(out) => {

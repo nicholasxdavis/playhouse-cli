@@ -15,11 +15,12 @@ pub async fn execute(workspace: &str) -> (i32, serde_json::Value) {
         return (5, metrics);
     }
 
-    let out = async_cmd("cargo")
-        .args(["test", "--message-format=json"])
-        .current_dir(workspace)
-        .output()
-        .await;
+    let out = {
+        let mut cmd = async_cmd("cargo");
+        cmd.args(["test", "--message-format=json"])
+            .current_dir(workspace);
+        crate::cmd::output_with_timeout(&mut cmd).await
+    };
 
     match out {
         Ok(o) => {

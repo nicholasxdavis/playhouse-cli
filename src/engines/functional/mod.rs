@@ -166,7 +166,7 @@ fn fix_hint(runner: &str) -> String {
         "cargo-test" => "install Rust toolchain: https://rustup.rs".into(),
         "go-test" => "install Go: https://go.dev/dl/".into(),
         "pytest" => "pip install pytest".into(),
-        "npm-test" => "npm install && npm test".into(),
+        "npm-test" => "npm install; npm test".into(),
         "mvn-test" => "install Maven and JDK".into(),
         "gradle-test" => "install Gradle/JDK or add gradlew".into(),
         _ => "playhouse doctor --json".into(),

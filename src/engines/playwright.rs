@@ -95,14 +95,15 @@ pub async fn execute(workspace: &str, pattern: Option<&str>) -> (i32, serde_json
                 let _ = report::save_engine_report(workspace, "playwright", &metrics);
                 (code, metrics)
             } else {
-                let code = if exit == 0 { 0 } else { 1 };
+                let code = 1;
                 let metrics = serde_json::json!({
                     "engine": "playwright",
-                    "passed": exit == 0,
+                    "passed": false,
                     "noTests": false,
                     "source": ctx.source,
-                    "parseError": stdout.is_empty(),
+                    "parseError": true,
                     "exitCode": exit,
+                    "error": "Playwright JSON report not parsed",
                 });
                 let _ = report::save_engine_report(workspace, "playwright", &metrics);
                 (code, metrics)

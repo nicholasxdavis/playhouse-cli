@@ -80,7 +80,7 @@ pub fn compute(
     let grade = grade_for(stars);
     let why = build_why(&categories, stars);
     let passed = stars >= settings.star_pass_threshold
-        && engines.iter().all(|e| e.skipped || e.exit_code == 0);
+        && engines.iter().all(|e| e.skipped || engine_ok(e));
 
     PlayhouseScore {
         stars,
@@ -94,9 +94,33 @@ pub fn compute(
 }
 
 pub const METHODOLOGY: &str = "Playhouse Stars (0-100) combine weighted category scores inspired by Lighthouse. \
-Each engine normalizes to 0-100, then categories are weighted (Security 45%, Functional 25%, \
-Performance and UX 20%, Toolchain 10%). Skipped engines are excluded and weights rebalance. \
+Each engine normalizes to 0-100, then categories are weighted (Trivy 25%, Functional 25%, \
+Arkenar 20%, Lighthouse 20%, Toolchain 10%). Skipped engines are excluded and weights rebalance. \
 90+ Production Ready, 75+ Good, 60+ Fair, 40+ Needs Work, below 40 Critical.";
+
+fn engine_ok(er: &EngineResult) -> bool {
+    if er.exit_code != 0 {
+        return false;
+    }
+    if er.metrics.get("error").is_some() {
+        return false;
+    }
+    if er.metrics
+        .get("parseError")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+    {
+        return false;
+    }
+    if er.metrics
+        .get("reportParseError")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+    {
+        return false;
+    }
+    true
+}
 
 fn weighted_stars(categories: &[CategoryScore]) -> u8 {
     let active: Vec<_> = categories.iter().filter(|c| !c.skipped).collect();
@@ -377,4 +401,92 @@ fn timestamp() -> String {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs().to_string())
         .unwrap_or_else(|_| "0".into())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::PlayhouseSettings;
+    use crate::types::{CheckStatus, HealthCheck};
+
+    fn settings() -> PlayhouseSettings {
+        PlayhouseSettings::default()
+    }
+
+    fn engine(name: &str, exit: i32, metrics: serde_json::Value) -> EngineResult {
+        EngineResult {
+            engine: name.into(),
+            exit_code: exit,
+            skipped: false,
+            metrics,
+        }
+    }
+
+    #[test]
+    fn skipped_engines_rebalance_weights() {
+        let engines = vec![
+            skipped("functional"),
+            engine(
+                "trivy",
+                0,
+                serde_json::json!({
+                    "summary": { "vulnerabilities": 0, "secrets": 0 },
+                    "passed": true
+                }),
+            ),
+        ];
+        let doctor = vec![HealthCheck {
+            name: "Trivy".into(),
+            status: CheckStatus::Pass,
+            detail: "ok".into(),
+        }];
+        let score = compute(&engines, Some(&doctor), &settings());
+        assert!(score.stars > 0);
+        assert!(score.passed);
+    }
+
+    #[test]
+    fn parse_error_fails_pass_gate() {
+        let engines = vec![engine(
+            "playwright",
+            0,
+            serde_json::json!({ "parseError": true }),
+        )];
+        let score = compute(&engines, None, &settings());
+        assert!(!score.passed);
+    }
+
+    #[test]
+    fn trivy_vulns_lower_stars() {
+        let engines = vec![engine(
+            "trivy",
+            4,
+            serde_json::json!({
+                "summary": { "vulnerabilities": 2, "secrets": 0 },
+                "passed": false
+            }),
+        )];
+        let score = compute(&engines, None, &settings());
+        assert!(score.stars < 100);
+        assert!(!score.passed);
+    }
+
+    #[test]
+    fn functional_all_pass_scores_high() {
+        let engines = vec![engine(
+            "functional",
+            0,
+            serde_json::json!({
+                "runner": "cargo-test",
+                "stats": { "passed": 10, "failed": 0, "skipped": 0 }
+            }),
+        )];
+        let score = compute(&engines, None, &settings());
+        let functional = score
+            .categories
+            .iter()
+            .find(|c| c.id == "functional")
+            .unwrap();
+        assert_eq!(functional.stars, 100);
+    }
 }
