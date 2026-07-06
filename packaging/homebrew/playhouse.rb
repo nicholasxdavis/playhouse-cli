@@ -1,11 +1,8 @@
 # frozen_string_literal: true
 
-# Optional Homebrew formula. Install from GitHub Releases.
-# Usage (custom tap):
-#   brew install ./packaging/homebrew/playhouse.rb
-# Or host this file in a tap repo and update url/sha256 per release.
+# Auto-updated by release workflow (scripts/update-homebrew-formula.js).
+# Usage: brew install ./packaging/homebrew/playhouse.rb
 
-# Headless QA CLI for security scans, functional tests, performance audits, and agent handoff.
 class Playhouse < Formula
   desc 'QA CLI for security, functional testing, performance audits, and agent handoff'
   homepage 'https://github.com/nicholasxdavis/playhouse-cli'
@@ -15,22 +12,22 @@ class Playhouse < Formula
   on_macos do
     on_arm do
       url 'https://github.com/nicholasxdavis/playhouse-cli/releases/download/v0.3.2/playhouse-0.3.2-aarch64-apple-darwin.tar.gz'
-      sha256 'REPLACE_ON_RELEASE'
+      sha256 'ddaa147779bcde935dba7c861da2f69434b8029b97bb7239e1d62b23befd4d9a'
     end
     on_intel do
       url 'https://github.com/nicholasxdavis/playhouse-cli/releases/download/v0.3.2/playhouse-0.3.2-x86_64-apple-darwin.tar.gz'
-      sha256 'REPLACE_ON_RELEASE'
+      sha256 'dd6842ba6adece57f2db88083274d87cbc695a753db3592670b0626f7c0afca0'
     end
   end
 
   on_linux do
     on_arm do
       url 'https://github.com/nicholasxdavis/playhouse-cli/releases/download/v0.3.2/playhouse-0.3.2-aarch64-unknown-linux-gnu.tar.gz'
-      sha256 'REPLACE_ON_RELEASE'
+      sha256 '3c4d7a56375d27bb5109e82298464665b1abad063a6617fde2030d8813ca2501'
     end
     on_intel do
       url 'https://github.com/nicholasxdavis/playhouse-cli/releases/download/v0.3.2/playhouse-0.3.2-x86_64-unknown-linux-gnu.tar.gz'
-      sha256 'REPLACE_ON_RELEASE'
+      sha256 'e649685dc6faa2650db73393412b0c02538bbf64d90599a41693ca62730effa2'
     end
   end
 

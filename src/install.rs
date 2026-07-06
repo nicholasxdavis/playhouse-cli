@@ -364,7 +364,7 @@ fn arkenar_download_spec() -> Result<(String, String, ArchiveKind), String> {
     {
         Ok((
             format!("{base}/arkenar-linux-arm64.tar.gz"),
-            format!("arkenar-linux-arm64.tar.gz"),
+            "arkenar-linux-arm64.tar.gz".to_string(),
             ArchiveKind::TarGz,
         ))
     }
@@ -372,7 +372,7 @@ fn arkenar_download_spec() -> Result<(String, String, ArchiveKind), String> {
     {
         Ok((
             format!("{base}/arkenar-macos-amd64.tar.gz"),
-            format!("arkenar-macos-amd64.tar.gz"),
+            "arkenar-macos-amd64.tar.gz".to_string(),
             ArchiveKind::TarGz,
         ))
     }
@@ -380,7 +380,7 @@ fn arkenar_download_spec() -> Result<(String, String, ArchiveKind), String> {
     {
         Ok((
             format!("{base}/arkenar-macos-arm64.tar.gz"),
-            format!("arkenar-macos-arm64.tar.gz"),
+            "arkenar-macos-arm64.tar.gz".to_string(),
             ArchiveKind::TarGz,
         ))
     }
