@@ -1,0 +1,128 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  PLAYHOUSE_GITHUB_REPO: nicholasxdavis/playhouse-cli
+
+jobs:
+  version-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Cargo.toml ↔ npm version sync
+        run: node scripts/check-version-sync.js
+
+  build:
+    needs: version-sync
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bin: playhouse.exe
+            archive: zip
+          - os: macos-14
+            target: x86_64-apple-darwin
+            bin: playhouse
+            archive: tar.gz
+          - os: macos-14
+            target: aarch64-apple-darwin
+            bin: playhouse
+            archive: tar.gz
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            bin: playhouse
+            archive: tar.gz
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            bin: playhouse
+            archive: tar.gz
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Read version
+        id: version
+        shell: bash
+        run: echo "value=$(grep '^version' Cargo.toml | head -1 | sed 's/.*\"\(.*\)\".*/\1/')" >> "$GITHUB_OUTPUT"
+
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Package (zip)
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.value }}"
+          $target = "${{ matrix.target }}"
+          $src = "target/${{ matrix.target }}/release/${{ matrix.bin }}"
+          $name = "playhouse-$version-$target.zip"
+          Compress-Archive -Path $src -DestinationPath $name -Force
+          echo "ASSET=$name" >> $env:GITHUB_ENV
+
+      - name: Package (tar.gz)
+        if: matrix.archive == 'tar.gz'
+        shell: bash
+        run: |
+          version="${{ steps.version.outputs.value }}"
+          target="${{ matrix.target }}"
+          src="target/${{ matrix.target }}/release/${{ matrix.bin }}"
+          name="playhouse-${version}-${target}.tar.gz"
+          tar czf "$name" -C "$(dirname "$src")" "$(basename "$src")"
+          echo "ASSET=$name" >> "$GITHUB_ENV"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: ${{ env.ASSET }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
+
+  npm-version-check:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Verify npm package version matches Cargo.toml
+        run: node scripts/check-version-sync.js

@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+env:
+  CARGO_TERM_COLOR: always
+  PLAYHOUSE_GITHUB_REPO: nicholasxdavis/playhouse-cli
+
+jobs:
+  version-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Cargo.toml ↔ npm version sync
+        run: node scripts/check-version-sync.js
+
+  rust:
+    needs: version-sync
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Unit + integration tests
+        run: cargo test --target ${{ matrix.target }}
+
+  npm-smoke:
+    needs: rust
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build native binary
+        run: cargo build --release
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Link local binary into npm package
+        working-directory: packages/playhouse
+        run: npm run link-local
+
+      - name: Launcher version
+        working-directory: packages/playhouse
+        run: node bin/playhouse.js --version
+
+      - name: Doctor smoke test
+        working-directory: packages/playhouse
+        run: node bin/playhouse.js doctor --json
+
+      - name: Upgrade check smoke test
+        working-directory: packages/playhouse
+        run: node bin/playhouse.js upgrade --json
+        continue-on-error: true
+
+  verify-smoke:
+    needs: rust
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            bin: target/release/playhouse
+          - os: macos-latest
+            bin: target/release/playhouse
+          - os: windows-latest
+            bin: target/release/playhouse.exe
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Install minimal bundled tools
+        run: ${{ matrix.bin }} install --minimal --json
+
+      - name: Verify (Rust workspace — browser audits N/A)
+        run: ${{ matrix.bin }} verify --json
+
+      - name: Functional fixture smoke
+        run: ${{ matrix.bin }} functional --json
+        working-directory: tests/fixtures/rust-app

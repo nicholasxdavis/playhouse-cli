@@ -1,0 +1,6 @@
+/target
+.playhouse
+packages/playhouse/vendor/
+packages/playhouse/.playhouse/
+tests/**/.playhouse
+tests/**/target/

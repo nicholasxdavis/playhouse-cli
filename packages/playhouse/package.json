@@ -1,0 +1,51 @@
+{
+  "name": "playhouse",
+  "version": "0.1.0",
+  "description": "Local QA CLI — security, functional, performance, agent handoff",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nicholasxdavis/playhouse-cli.git",
+    "directory": "packages/playhouse"
+  },
+  "homepage": "https://github.com/nicholasxdavis/playhouse-cli#readme",
+  "bugs": {
+    "url": "https://github.com/nicholasxdavis/playhouse-cli/issues"
+  },
+  "keywords": [
+    "qa",
+    "cli",
+    "playwright",
+    "lighthouse",
+    "trivy",
+    "security",
+    "testing",
+    "agents"
+  ],
+  "bin": {
+    "playhouse": "bin/playhouse.js",
+    "playhouse-install-tools": "scripts/project-postinstall.js"
+  },
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js",
+    "link-local": "node scripts/link-local.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "bin",
+    "scripts",
+    "README.md",
+    "LICENSE"
+  ],
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ]
+}
