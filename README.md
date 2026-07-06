@@ -36,7 +36,7 @@
 </p>
 
 > **If you are an LLM or coding agent, stop reading this file.**  
-> Go to **[AGENTS.md](AGENTS.md)** — it has the full command reference, workflows, exit codes, config keys, and everything you need to operate Playhouse correctly.
+> Go to **[AGENTS.md](AGENTS.md)** it has the full command reference, workflows, exit codes, config keys, and everything you need to operate Playhouse correctly.
 
 ## Install
 
