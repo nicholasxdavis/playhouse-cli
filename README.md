@@ -40,8 +40,6 @@
 
 ## Install
 
-**Recommended:**
-
 ```bash
 npm install -g playhouse
 playhouse install --full   # Trivy, Arkenar, Playwright, Lighthouse, chromium
