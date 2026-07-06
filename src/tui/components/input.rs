@@ -48,7 +48,7 @@ pub fn render(f: &mut Frame, area: Rect, app: &App) {
             Line::from(vec![
                 Span::styled(" ", Style::default()),
                 Span::styled(
-                    "Enter send · Shift+Enter newline · Tab complete · Ctrl+Shift+C copy",
+                    "Enter send · Shift+Enter newline · Tab complete",
                     theme::text_dim(),
                 ),
             ]),

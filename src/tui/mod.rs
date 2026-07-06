@@ -4,9 +4,11 @@ mod commands;
 mod components;
 mod config;
 mod keys;
+mod mascot;
 mod mention;
 mod selection;
 mod spinner;
+mod splash;
 mod tasks;
 mod text_box;
 mod theme;
@@ -62,7 +64,17 @@ async fn run_inner(workspace: &str) -> io::Result<()> {
     terminal.clear()?;
 
     theme::load_config();
-    let mut app = App::new(workspace);
+
+    let first_run = splash::is_first_run(workspace);
+    let showed_splash = if splash::skip_requested() {
+        false
+    } else {
+        splash::run(&mut terminal, workspace, first_run)?;
+        splash::mark_launched();
+        true
+    };
+
+    let mut app = App::new(workspace, showed_splash);
     let (task_tx, mut task_rx) = mpsc::unbounded_channel();
     let tick_rate = Duration::from_millis(80);
     let mut needs_redraw = true;
@@ -190,6 +202,6 @@ async fn run_inner(workspace: &str) -> io::Result<()> {
         event::DisableMouseCapture
     )?;
     terminal.show_cursor()?;
-    println!("\n  Playhouse - See you next time.\n");
+    println!("\n  Thanks for using Playhouse. Run `playhouse` anytime.\n");
     Ok(())
 }

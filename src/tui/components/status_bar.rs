@@ -28,11 +28,9 @@ pub fn render(f: &mut Frame, area: Rect, app: &App) {
         Span::styled(status_label, status_style),
         Span::styled(" | ", theme::text_dim()),
         Span::styled(
-            text_box::truncate(&app.workspace, area.width as usize / 3),
+            text_box::truncate(&app.workspace, area.width as usize / 2),
             theme::text_muted(),
         ),
-        Span::styled(" | ", theme::text_dim()),
-        Span::styled("Ctrl+Shift+C copy | Ctrl+C x3 quit", theme::text_muted()),
     ];
 
     if app.feed_scrolled_up() {

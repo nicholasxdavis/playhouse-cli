@@ -7,6 +7,7 @@ use ratatui::{
 
 use crate::tui::app::App;
 use crate::tui::config;
+use crate::tui::mascot;
 use crate::tui::theme;
 
 pub fn render(f: &mut Frame, area: Rect, app: &App) {
@@ -19,6 +20,7 @@ pub fn render(f: &mut Frame, area: Rect, app: &App) {
 
     let inner = block.inner(area);
     f.render_widget(block, area);
+    mascot::render_corner(f, area, &app.workspace, 72);
 
     let sections = Layout::vertical([
         Constraint::Length(2),
