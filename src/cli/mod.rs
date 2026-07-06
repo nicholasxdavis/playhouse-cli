@@ -1,3 +1,78 @@
+mod agent_cmd;
+mod args;
+mod audit;
+mod config_cmd;
+mod context;
+mod doctor;
 mod handlers;
+mod install_cmd;
+mod output;
+mod test_cmd;
+mod upgrade_cmd;
+mod workspace_cmd;
 
-pub use handlers::{print_last_score, resolve_url, run_agent_handoff, run_verify};
+pub use args::Cli;
+
+use args::Commands;
+use context::Context;
+
+use crate::config;
+use crate::tui;
+use crate::workspace;
+
+pub async fn run(cli: Cli) -> i32 {
+    let workspace = std::env::current_dir()
+        .unwrap_or_else(|_| std::path::PathBuf::from("."))
+        .to_string_lossy()
+        .to_string();
+
+    let settings = config::load_settings();
+    workspace::maybe_auto_init(&workspace, &settings);
+
+    let json = cli.json || settings.json_output_default || settings.agent_mode;
+    let ctx = Context {
+        workspace: &workspace,
+        settings: &settings,
+        json,
+    };
+
+    match cli.command {
+        None => tui::run(&workspace).await,
+
+        Some(Commands::Doctor) => doctor::run(&ctx).await,
+
+        Some(Commands::Install { minimal, full }) => {
+            install_cmd::run(&ctx, minimal, full).await
+        }
+
+        Some(Commands::Init { stay_on_track }) => workspace_cmd::run_init(&ctx, stay_on_track).await,
+
+        Some(Commands::Agent { action }) => agent_cmd::run(&ctx, action).await,
+
+        Some(Commands::Config { action }) => config_cmd::run(&ctx, action),
+
+        Some(Commands::Export) => workspace_cmd::run_export(&ctx),
+
+        Some(Commands::StayOnTrack { action }) => workspace_cmd::run_stay_on_track(&ctx, action),
+
+        Some(Commands::Skill { action }) => workspace_cmd::run_skill(&ctx, action),
+
+        Some(Commands::Lighthouse { url }) => audit::run_lighthouse(&ctx, url).await,
+
+        Some(Commands::Playwright { pattern }) => audit::run_playwright(&ctx, pattern).await,
+
+        Some(Commands::Functional) => audit::run_functional(&ctx).await,
+
+        Some(Commands::Test { action }) => test_cmd::run(&ctx, action).await,
+
+        Some(Commands::Trivy) => audit::run_trivy(&ctx).await,
+
+        Some(Commands::Arkenar { url }) => audit::run_arkenar(&ctx, url).await,
+
+        Some(Commands::Verify { url }) => audit::run_verify(&ctx, url).await,
+
+        Some(Commands::Score { url, last }) => audit::run_score(&ctx, url, last).await,
+
+        Some(Commands::Upgrade) => upgrade_cmd::run(&ctx),
+    }
+}

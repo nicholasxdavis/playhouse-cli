@@ -1,0 +1,3590 @@
+{
+  "audit": {
+    "command": "audit",
+    "doctor": [
+      {
+        "detail": "cargo local build v0.1.0 (C:\\Users\\lifa2\\OneDrive\\Desktop\\playhouse cli\\target\\release\\playhouse.exe)",
+        "name": "Playhouse CLI",
+        "status": "pass"
+      },
+      {
+        "detail": "bundled: Version: 0.72.0",
+        "name": "Trivy",
+        "status": "pass"
+      },
+      {
+        "detail": "bundled - MIT Rust scanner",
+        "name": "Arkenar DAST",
+        "status": "pass"
+      },
+      {
+        "detail": "cargo 1.92.0 (344c4567c 2025-10-21)",
+        "name": "cargo",
+        "status": "pass"
+      }
+    ],
+    "engines": [
+      {
+        "engine": "trivy",
+        "exit_code": 0,
+        "metrics": {
+          "engine": "trivy",
+          "exitCode": 0,
+          "passed": true,
+          "raw": {
+            "ArtifactID": "sha256:80771aed33c4c9e9d03d52e59a4a2978514560945f6145719f3c361bf6f91419",
+            "ArtifactName": ".",
+            "ArtifactType": "repository",
+            "CreatedAt": "2026-07-05T23:31:01.0822305-06:00",
+            "Metadata": {
+              "Author": "nic x <nic@blacnova.net>",
+              "Branch": "main",
+              "Commit": "5f06794a6cddc7539ab426a7f013d95f25de14c2",
+              "CommitMsg": "fix clippy warnings + remove dead code , small touch ups",
+              "Committer": "nic x <nic@blacnova.net>",
+              "RepoURL": "https://github.com/nicholasxdavis/playhouse-cli.git"
+            },
+            "ReportID": "019f35e8-8e5a-7384-acf5-e87777d70baa",
+            "Results": [
+              {
+                "Class": "lang-pkgs",
+                "Packages": [
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "arboard@3.6.1",
+                      "clap@4.6.1",
+                      "crossterm@0.28.1",
+                      "directories@5.0.1",
+                      "ratatui@0.29.0",
+                      "serde@1.0.228",
+                      "serde_json@1.0.150",
+                      "tokio@1.52.3",
+                      "unicode-width@0.2.0"
+                    ],
+                    "ID": "playhouse@0.1.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/playhouse@0.1.0",
+                      "UID": "c7e20e5c2107d64c"
+                    },
+                    "Locations": [
+                      {
+                        "EndLine": 720,
+                        "StartLine": 707
+                      }
+                    ],
+                    "Name": "playhouse",
+                    "Relationship": "root",
+                    "Version": "0.1.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "clipboard-win@5.4.1",
+                      "image@0.25.10",
+                      "log@0.4.33",
+                      "objc2-app-kit@0.3.2",
+                      "objc2-core-foundation@0.3.2",
+                      "objc2-core-graphics@0.3.2",
+                      "objc2-foundation@0.3.2",
+                      "objc2@0.6.4",
+                      "parking_lot@0.12.5",
+                      "percent-encoding@2.3.2",
+                      "windows-sys@0.59.0",
+                      "x11rb@0.13.2"
+                    ],
+                    "ID": "arboard@3.6.1",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/arboard@3.6.1",
+                      "UID": "df78eb9a6ce9c2ba"
+                    },
+                    "Locations": [
+                      {
+                        "EndLine": 85,
+                        "StartLine": 67
+                      }
+                    ],
+                    "Name": "arboard",
+                    "Relationship": "direct",
+                    "Version": "3.6.1"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "clap_builder@4.6.0",
+                      "clap_derive@4.6.1"
+                    ],
+                    "ID": "clap@4.6.1",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/clap@4.6.1",
+                      "UID": "3bf3a3fad195114f"
+                    },
+                    "Locations": [
+                      {
+                        "EndLine": 146,
+                        "StartLine": 138
+                      }
+                    ],
+                    "Name": "clap",
+                    "Relationship": "direct",
+                    "Version": "4.6.1"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "bitflags@2.13.0",
+                      "crossterm_winapi@0.9.1",
+                      "mio@1.2.1",
+                      "parking_lot@0.12.5",
+                      "rustix@0.38.44",
+                      "signal-hook-mio@0.2.5",
+                      "signal-hook@0.3.18",
+                      "winapi@0.3.9"
+                    ],
+                    "ID": "crossterm@0.28.1",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/crossterm@0.28.1",
+                      "UID": "e66a53392563d068"
+                    },
+                    "Locations": [
+                      {
+                        "EndLine": 230,
+                        "StartLine": 216
+                      }
+                    ],
+                    "Name": "crossterm",
+                    "Relationship": "direct",
+                    "Version": "0.28.1"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "dirs-sys@0.4.1"
+                    ],
+                    "ID": "directories@5.0.1",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/directories@5.0.1",
+                      "UID": "4d328262dc76da0e"
+                    },
+                    "Locations": [
+                      {
+                        "EndLine": 288,
+                        "StartLine": 281
+                      }
+                    ],
+                    "Name": "directories",
+                    "Relationship": "direct",
+                    "Version": "5.0.1"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "bitflags@2.13.0",
+                      "cassowary@0.3.0",
+                      "compact_str@0.8.2",
+                      "crossterm@0.28.1",
+                      "indoc@2.0.7",
+                      "instability@0.3.12",
+                      "itertools@0.13.0",
+                      "lru@0.12.5",
+                      "paste@1.0.15",
+                      "strum@0.26.3",
+                      "unicode-segmentation@1.13.3",
+                      "unicode-truncate@1.1.0",
+                      "unicode-width@0.2.0"
+                    ],
+                    "ID": "ratatui@0.29.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/ratatui@0.29.0",
+                      "UID": "9a313303e5b7db69"
+                    },
+                    "Locations": [
+                      {
+                        "EndLine": 784,
+                        "StartLine": 765
+                      }
+                    ],
+                    "Name": "ratatui",
+                    "Relationship": "direct",
+                    "Version": "0.29.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "serde_core@1.0.228",
+                      "serde_derive@1.0.228"
+                    ],
+                    "ID": "serde@1.0.228",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/serde@1.0.228",
+                      "UID": "4aab7a4a2163370f"
+                    },
+                    "Locations": [
+                      {
+                        "EndLine": 858,
+                        "StartLine": 850
+                      }
+                    ],
+                    "Name": "serde",
+                    "Relationship": "direct",
+                    "Version": "1.0.228"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "itoa@1.0.18",
+                      "memchr@2.8.2",
+                      "serde@1.0.228",
+                      "serde_core@1.0.228",
+                      "zmij@1.0.21"
+                    ],
+                    "ID": "serde_json@1.0.150",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/serde_json@1.0.150",
+                      "UID": "f8105bcfebb7747b"
+                    },
+                    "Locations": [
+                      {
+                        "EndLine": 891,
+                        "StartLine": 880
+                      }
+                    ],
+                    "Name": "serde_json",
+                    "Relationship": "direct",
+                    "Version": "1.0.150"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "bytes@1.12.0",
+                      "libc@0.2.186",
+                      "mio@1.2.1",
+                      "parking_lot@0.12.5",
+                      "pin-project-lite@0.2.17",
+                      "signal-hook-registry@1.4.8",
+                      "socket2@0.6.4",
+                      "tokio-macros@2.7.0",
+                      "windows-sys@0.61.2"
+                    ],
+                    "ID": "tokio@1.52.3",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/tokio@1.52.3",
+                      "UID": "c2cc9c8b70f5e0ec"
+                    },
+                    "Locations": [
+                      {
+                        "EndLine": 1040,
+                        "StartLine": 1025
+                      }
+                    ],
+                    "Name": "tokio",
+                    "Relationship": "direct",
+                    "Version": "1.52.3"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "unicode-width@0.2.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/unicode-width@0.2.0",
+                      "UID": "f45a28a8e4329b54"
+                    },
+                    "Locations": [
+                      {
+                        "EndLine": 1086,
+                        "StartLine": 1082
+                      }
+                    ],
+                    "Name": "unicode-width",
+                    "Relationship": "direct",
+                    "Version": "0.2.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "adler2@2.0.1",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/adler2@2.0.1",
+                      "UID": "24cfad1b558e51e3"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 9,
+                        "StartLine": 5
+                      }
+                    ],
+                    "Name": "adler2",
+                    "Relationship": "indirect",
+                    "Version": "2.0.1"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "allocator-api2@0.2.21",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/allocator-api2@0.2.21",
+                      "UID": "5e3756b781a22787"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 15,
+                        "StartLine": 11
+                      }
+                    ],
+                    "Name": "allocator-api2",
+                    "Relationship": "indirect",
+                    "Version": "0.2.21"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "anstyle-parse@1.0.0",
+                      "anstyle-query@1.1.5",
+                      "anstyle-wincon@3.0.11",
+                      "anstyle@1.0.14",
+                      "colorchoice@1.0.5",
+                      "is_terminal_polyfill@1.70.2",
+                      "utf8parse@0.2.2"
+                    ],
+                    "ID": "anstream@1.0.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/anstream@1.0.0",
+                      "UID": "6364825ed3c1eef5"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 30,
+                        "StartLine": 17
+                      }
+                    ],
+                    "Name": "anstream",
+                    "Relationship": "indirect",
+                    "Version": "1.0.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "anstyle@1.0.14",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/anstyle@1.0.14",
+                      "UID": "2191b5bb737d40f4"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 36,
+                        "StartLine": 32
+                      }
+                    ],
+                    "Name": "anstyle",
+                    "Relationship": "indirect",
+                    "Version": "1.0.14"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "utf8parse@0.2.2"
+                    ],
+                    "ID": "anstyle-parse@1.0.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/anstyle-parse@1.0.0",
+                      "UID": "6e35f8060a31578c"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 45,
+                        "StartLine": 38
+                      }
+                    ],
+                    "Name": "anstyle-parse",
+                    "Relationship": "indirect",
+                    "Version": "1.0.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "windows-sys@0.61.2"
+                    ],
+                    "ID": "anstyle-query@1.1.5",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/anstyle-query@1.1.5",
+                      "UID": "3c7eff45a59fb30"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 54,
+                        "StartLine": 47
+                      }
+                    ],
+                    "Name": "anstyle-query",
+                    "Relationship": "indirect",
+                    "Version": "1.1.5"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "anstyle@1.0.14",
+                      "once_cell_polyfill@1.70.2",
+                      "windows-sys@0.61.2"
+                    ],
+                    "ID": "anstyle-wincon@3.0.11",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/anstyle-wincon@3.0.11",
+                      "UID": "f422619d5771727f"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 65,
+                        "StartLine": 56
+                      }
+                    ],
+                    "Name": "anstyle-wincon",
+                    "Relationship": "indirect",
+                    "Version": "3.0.11"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "autocfg@1.5.1",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/autocfg@1.5.1",
+                      "UID": "33383c3adac5251"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 91,
+                        "StartLine": 87
+                      }
+                    ],
+                    "Name": "autocfg",
+                    "Relationship": "indirect",
+                    "Version": "1.5.1"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "bitflags@2.13.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/bitflags@2.13.0",
+                      "UID": "584ece0b7c798675"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 97,
+                        "StartLine": 93
+                      }
+                    ],
+                    "Name": "bitflags",
+                    "Relationship": "indirect",
+                    "Version": "2.13.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "bytemuck@1.25.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/bytemuck@1.25.0",
+                      "UID": "819052652b914c2c"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 103,
+                        "StartLine": 99
+                      }
+                    ],
+                    "Name": "bytemuck",
+                    "Relationship": "indirect",
+                    "Version": "1.25.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "byteorder-lite@0.1.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/byteorder-lite@0.1.0",
+                      "UID": "c8021ff5be3cad06"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 109,
+                        "StartLine": 105
+                      }
+                    ],
+                    "Name": "byteorder-lite",
+                    "Relationship": "indirect",
+                    "Version": "0.1.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "bytes@1.12.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/bytes@1.12.0",
+                      "UID": "fa9780e0efc6e4e0"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 115,
+                        "StartLine": 111
+                      }
+                    ],
+                    "Name": "bytes",
+                    "Relationship": "indirect",
+                    "Version": "1.12.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "cassowary@0.3.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/cassowary@0.3.0",
+                      "UID": "db5295d428aa5561"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 121,
+                        "StartLine": 117
+                      }
+                    ],
+                    "Name": "cassowary",
+                    "Relationship": "indirect",
+                    "Version": "0.3.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "rustversion@1.0.22"
+                    ],
+                    "ID": "castaway@0.2.4",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/castaway@0.2.4",
+                      "UID": "2b0b1a09b58323f4"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 130,
+                        "StartLine": 123
+                      }
+                    ],
+                    "Name": "castaway",
+                    "Relationship": "indirect",
+                    "Version": "0.2.4"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "cfg-if@1.0.4",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/cfg-if@1.0.4",
+                      "UID": "510bbae0977d806a"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 136,
+                        "StartLine": 132
+                      }
+                    ],
+                    "Name": "cfg-if",
+                    "Relationship": "indirect",
+                    "Version": "1.0.4"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "anstream@1.0.0",
+                      "anstyle@1.0.14",
+                      "clap_lex@1.1.0",
+                      "strsim@0.11.1"
+                    ],
+                    "ID": "clap_builder@4.6.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/clap_builder@4.6.0",
+                      "UID": "561efb8cdc09242a"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 158,
+                        "StartLine": 148
+                      }
+                    ],
+                    "Name": "clap_builder",
+                    "Relationship": "indirect",
+                    "Version": "4.6.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "heck@0.5.0",
+                      "proc-macro2@1.0.106",
+                      "quote@1.0.46",
+                      "syn@2.0.118"
+                    ],
+                    "ID": "clap_derive@4.6.1",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/clap_derive@4.6.1",
+                      "UID": "f8685e87b5710beb"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 170,
+                        "StartLine": 160
+                      }
+                    ],
+                    "Name": "clap_derive",
+                    "Relationship": "indirect",
+                    "Version": "4.6.1"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "clap_lex@1.1.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/clap_lex@1.1.0",
+                      "UID": "ca879f387104d590"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 176,
+                        "StartLine": 172
+                      }
+                    ],
+                    "Name": "clap_lex",
+                    "Relationship": "indirect",
+                    "Version": "1.1.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "error-code@3.3.2"
+                    ],
+                    "ID": "clipboard-win@5.4.1",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/clipboard-win@5.4.1",
+                      "UID": "40aa5ce1bbe94687"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 185,
+                        "StartLine": 178
+                      }
+                    ],
+                    "Name": "clipboard-win",
+                    "Relationship": "indirect",
+                    "Version": "5.4.1"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "colorchoice@1.0.5",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/colorchoice@1.0.5",
+                      "UID": "cd7ff09865988da0"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 191,
+                        "StartLine": 187
+                      }
+                    ],
+                    "Name": "colorchoice",
+                    "Relationship": "indirect",
+                    "Version": "1.0.5"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "castaway@0.2.4",
+                      "cfg-if@1.0.4",
+                      "itoa@1.0.18",
+                      "rustversion@1.0.22",
+                      "ryu@1.0.23",
+                      "static_assertions@1.1.0"
+                    ],
+                    "ID": "compact_str@0.8.2",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/compact_str@0.8.2",
+                      "UID": "531932e083af02cd"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 205,
+                        "StartLine": 193
+                      }
+                    ],
+                    "Name": "compact_str",
+                    "Relationship": "indirect",
+                    "Version": "0.8.2"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "cfg-if@1.0.4"
+                    ],
+                    "ID": "crc32fast@1.5.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/crc32fast@1.5.0",
+                      "UID": "d18b9533e7c2a60"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 214,
+                        "StartLine": 207
+                      }
+                    ],
+                    "Name": "crc32fast",
+                    "Relationship": "indirect",
+                    "Version": "1.5.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "winapi@0.3.9"
+                    ],
+                    "ID": "crossterm_winapi@0.9.1",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/crossterm_winapi@0.9.1",
+                      "UID": "bb0194e965b2b896"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 239,
+                        "StartLine": 232
+                      }
+                    ],
+                    "Name": "crossterm_winapi",
+                    "Relationship": "indirect",
+                    "Version": "0.9.1"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "crunchy@0.2.4",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/crunchy@0.2.4",
+                      "UID": "a5a3a14a7809cf6"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 245,
+                        "StartLine": 241
+                      }
+                    ],
+                    "Name": "crunchy",
+                    "Relationship": "indirect",
+                    "Version": "0.2.4"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "darling_core@0.23.0",
+                      "darling_macro@0.23.0"
+                    ],
+                    "ID": "darling@0.23.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/darling@0.23.0",
+                      "UID": "ffad4fdabcabdf12"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 255,
+                        "StartLine": 247
+                      }
+                    ],
+                    "Name": "darling",
+                    "Relationship": "indirect",
+                    "Version": "0.23.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "ident_case@1.0.1",
+                      "proc-macro2@1.0.106",
+                      "quote@1.0.46",
+                      "strsim@0.11.1",
+                      "syn@2.0.118"
+                    ],
+                    "ID": "darling_core@0.23.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/darling_core@0.23.0",
+                      "UID": "e8f70523fa93ea11"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 268,
+                        "StartLine": 257
+                      }
+                    ],
+                    "Name": "darling_core",
+                    "Relationship": "indirect",
+                    "Version": "0.23.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "darling_core@0.23.0",
+                      "quote@1.0.46",
+                      "syn@2.0.118"
+                    ],
+                    "ID": "darling_macro@0.23.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/darling_macro@0.23.0",
+                      "UID": "8332ea67c6a8f169"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 279,
+                        "StartLine": 270
+                      }
+                    ],
+                    "Name": "darling_macro",
+                    "Relationship": "indirect",
+                    "Version": "0.23.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "libc@0.2.186",
+                      "option-ext@0.2.0",
+                      "redox_users@0.4.6",
+                      "windows-sys@0.48.0"
+                    ],
+                    "ID": "dirs-sys@0.4.1",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/dirs-sys@0.4.1",
+                      "UID": "852ae172dbbdc407"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 300,
+                        "StartLine": 290
+                      }
+                    ],
+                    "Name": "dirs-sys",
+                    "Relationship": "indirect",
+                    "Version": "0.4.1"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "bitflags@2.13.0",
+                      "objc2@0.6.4"
+                    ],
+                    "ID": "dispatch2@0.3.1",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/dispatch2@0.3.1",
+                      "UID": "a5074af7381bab78"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 310,
+                        "StartLine": 302
+                      }
+                    ],
+                    "Name": "dispatch2",
+                    "Relationship": "indirect",
+                    "Version": "0.3.1"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "either@1.16.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/either@1.16.0",
+                      "UID": "8c8961e28fd98eaa"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 316,
+                        "StartLine": 312
+                      }
+                    ],
+                    "Name": "either",
+                    "Relationship": "indirect",
+                    "Version": "1.16.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "equivalent@1.0.2",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/equivalent@1.0.2",
+                      "UID": "bb648e5aa88e63b8"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 322,
+                        "StartLine": 318
+                      }
+                    ],
+                    "Name": "equivalent",
+                    "Relationship": "indirect",
+                    "Version": "1.0.2"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "libc@0.2.186",
+                      "windows-sys@0.61.2"
+                    ],
+                    "ID": "errno@0.3.14",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/errno@0.3.14",
+                      "UID": "6eda673675fddd68"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 332,
+                        "StartLine": 324
+                      }
+                    ],
+                    "Name": "errno",
+                    "Relationship": "indirect",
+                    "Version": "0.3.14"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "error-code@3.3.2",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/error-code@3.3.2",
+                      "UID": "e87a10cb8c616731"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 338,
+                        "StartLine": 334
+                      }
+                    ],
+                    "Name": "error-code",
+                    "Relationship": "indirect",
+                    "Version": "3.3.2"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "fax@0.2.7",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/fax@0.2.7",
+                      "UID": "573bc5c4c9bd710f"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 344,
+                        "StartLine": 340
+                      }
+                    ],
+                    "Name": "fax",
+                    "Relationship": "indirect",
+                    "Version": "0.2.7"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "simd-adler32@0.3.9"
+                    ],
+                    "ID": "fdeflate@0.3.7",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/fdeflate@0.3.7",
+                      "UID": "36fa1ba937ebea71"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 353,
+                        "StartLine": 346
+                      }
+                    ],
+                    "Name": "fdeflate",
+                    "Relationship": "indirect",
+                    "Version": "0.3.7"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "crc32fast@1.5.0",
+                      "miniz_oxide@0.8.9"
+                    ],
+                    "ID": "flate2@1.1.9",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/flate2@1.1.9",
+                      "UID": "a77a0bf995d333c9"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 363,
+                        "StartLine": 355
+                      }
+                    ],
+                    "Name": "flate2",
+                    "Relationship": "indirect",
+                    "Version": "1.1.9"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "foldhash@0.1.5",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/foldhash@0.1.5",
+                      "UID": "c4a3d20f77d1ede"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 369,
+                        "StartLine": 365
+                      }
+                    ],
+                    "Name": "foldhash",
+                    "Relationship": "indirect",
+                    "Version": "0.1.5"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "rustix@1.1.4",
+                      "windows-link@0.2.1"
+                    ],
+                    "ID": "gethostname@1.1.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/gethostname@1.1.0",
+                      "UID": "469d118e3b6e73c5"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 379,
+                        "StartLine": 371
+                      }
+                    ],
+                    "Name": "gethostname",
+                    "Relationship": "indirect",
+                    "Version": "1.1.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "cfg-if@1.0.4",
+                      "libc@0.2.186",
+                      "wasi@0.11.1+wasi-snapshot-preview1"
+                    ],
+                    "ID": "getrandom@0.2.17",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/getrandom@0.2.17",
+                      "UID": "eaca9b6630884bc7"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 390,
+                        "StartLine": 381
+                      }
+                    ],
+                    "Name": "getrandom",
+                    "Relationship": "indirect",
+                    "Version": "0.2.17"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "cfg-if@1.0.4",
+                      "crunchy@0.2.4",
+                      "zerocopy@0.8.52"
+                    ],
+                    "ID": "half@2.7.1",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/half@2.7.1",
+                      "UID": "ddefa4245fb311c5"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 401,
+                        "StartLine": 392
+                      }
+                    ],
+                    "Name": "half",
+                    "Relationship": "indirect",
+                    "Version": "2.7.1"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "allocator-api2@0.2.21",
+                      "equivalent@1.0.2",
+                      "foldhash@0.1.5"
+                    ],
+                    "ID": "hashbrown@0.15.5",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/hashbrown@0.15.5",
+                      "UID": "260df6ef54475449"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 412,
+                        "StartLine": 403
+                      }
+                    ],
+                    "Name": "hashbrown",
+                    "Relationship": "indirect",
+                    "Version": "0.15.5"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "heck@0.5.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/heck@0.5.0",
+                      "UID": "cf907b8ea12bba43"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 418,
+                        "StartLine": 414
+                      }
+                    ],
+                    "Name": "heck",
+                    "Relationship": "indirect",
+                    "Version": "0.5.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "ident_case@1.0.1",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/ident_case@1.0.1",
+                      "UID": "698fb32de6272479"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 424,
+                        "StartLine": 420
+                      }
+                    ],
+                    "Name": "ident_case",
+                    "Relationship": "indirect",
+                    "Version": "1.0.1"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "bytemuck@1.25.0",
+                      "byteorder-lite@0.1.0",
+                      "moxcms@0.8.1",
+                      "num-traits@0.2.19",
+                      "png@0.18.1",
+                      "tiff@0.11.3"
+                    ],
+                    "ID": "image@0.25.10",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/image@0.25.10",
+                      "UID": "1d05e4e62c72b40d"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 438,
+                        "StartLine": 426
+                      }
+                    ],
+                    "Name": "image",
+                    "Relationship": "indirect",
+                    "Version": "0.25.10"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "rustversion@1.0.22"
+                    ],
+                    "ID": "indoc@2.0.7",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/indoc@2.0.7",
+                      "UID": "3ef43d6d7a35fbc8"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 447,
+                        "StartLine": 440
+                      }
+                    ],
+                    "Name": "indoc",
+                    "Relationship": "indirect",
+                    "Version": "2.0.7"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "darling@0.23.0",
+                      "indoc@2.0.7",
+                      "proc-macro2@1.0.106",
+                      "quote@1.0.46",
+                      "syn@2.0.118"
+                    ],
+                    "ID": "instability@0.3.12",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/instability@0.3.12",
+                      "UID": "565d1b09f9fe955b"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 460,
+                        "StartLine": 449
+                      }
+                    ],
+                    "Name": "instability",
+                    "Relationship": "indirect",
+                    "Version": "0.3.12"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "is_terminal_polyfill@1.70.2",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/is_terminal_polyfill@1.70.2",
+                      "UID": "3d0457af02dc70df"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 466,
+                        "StartLine": 462
+                      }
+                    ],
+                    "Name": "is_terminal_polyfill",
+                    "Relationship": "indirect",
+                    "Version": "1.70.2"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "either@1.16.0"
+                    ],
+                    "ID": "itertools@0.13.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/itertools@0.13.0",
+                      "UID": "ae537a3f80c1c310"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 475,
+                        "StartLine": 468
+                      }
+                    ],
+                    "Name": "itertools",
+                    "Relationship": "indirect",
+                    "Version": "0.13.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "itoa@1.0.18",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/itoa@1.0.18",
+                      "UID": "a3aa29e2441d4c71"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 481,
+                        "StartLine": 477
+                      }
+                    ],
+                    "Name": "itoa",
+                    "Relationship": "indirect",
+                    "Version": "1.0.18"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "libc@0.2.186",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/libc@0.2.186",
+                      "UID": "d382568af86f4d2c"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 487,
+                        "StartLine": 483
+                      }
+                    ],
+                    "Name": "libc",
+                    "Relationship": "indirect",
+                    "Version": "0.2.186"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "libc@0.2.186"
+                    ],
+                    "ID": "libredox@0.1.18",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/libredox@0.1.18",
+                      "UID": "2ef16dbcfce485f3"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 496,
+                        "StartLine": 489
+                      }
+                    ],
+                    "Name": "libredox",
+                    "Relationship": "indirect",
+                    "Version": "0.1.18"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "linux-raw-sys@0.12.1",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/linux-raw-sys@0.12.1",
+                      "UID": "771055ff3f4c196e"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 508,
+                        "StartLine": 504
+                      }
+                    ],
+                    "Name": "linux-raw-sys",
+                    "Relationship": "indirect",
+                    "Version": "0.12.1"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "linux-raw-sys@0.4.15",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/linux-raw-sys@0.4.15",
+                      "UID": "cf224a2dabddf05d"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 502,
+                        "StartLine": 498
+                      }
+                    ],
+                    "Name": "linux-raw-sys",
+                    "Relationship": "indirect",
+                    "Version": "0.4.15"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "scopeguard@1.2.0"
+                    ],
+                    "ID": "lock_api@0.4.14",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/lock_api@0.4.14",
+                      "UID": "db9b999807e1e7e7"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 517,
+                        "StartLine": 510
+                      }
+                    ],
+                    "Name": "lock_api",
+                    "Relationship": "indirect",
+                    "Version": "0.4.14"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "log@0.4.33",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/log@0.4.33",
+                      "UID": "ef0b0f38be0b001f"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 523,
+                        "StartLine": 519
+                      }
+                    ],
+                    "Name": "log",
+                    "Relationship": "indirect",
+                    "Version": "0.4.33"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "hashbrown@0.15.5"
+                    ],
+                    "ID": "lru@0.12.5",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/lru@0.12.5",
+                      "UID": "6fd364c73429d3d9"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 532,
+                        "StartLine": 525
+                      }
+                    ],
+                    "Name": "lru",
+                    "Relationship": "indirect",
+                    "Version": "0.12.5"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "memchr@2.8.2",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/memchr@2.8.2",
+                      "UID": "12111cfba275fac9"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 538,
+                        "StartLine": 534
+                      }
+                    ],
+                    "Name": "memchr",
+                    "Relationship": "indirect",
+                    "Version": "2.8.2"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "adler2@2.0.1",
+                      "simd-adler32@0.3.9"
+                    ],
+                    "ID": "miniz_oxide@0.8.9",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/miniz_oxide@0.8.9",
+                      "UID": "20ac0c7ec4923d74"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 548,
+                        "StartLine": 540
+                      }
+                    ],
+                    "Name": "miniz_oxide",
+                    "Relationship": "indirect",
+                    "Version": "0.8.9"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "libc@0.2.186",
+                      "log@0.4.33",
+                      "wasi@0.11.1+wasi-snapshot-preview1",
+                      "windows-sys@0.61.2"
+                    ],
+                    "ID": "mio@1.2.1",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/mio@1.2.1",
+                      "UID": "5aadaed13613b0b2"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 560,
+                        "StartLine": 550
+                      }
+                    ],
+                    "Name": "mio",
+                    "Relationship": "indirect",
+                    "Version": "1.2.1"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "num-traits@0.2.19",
+                      "pxfm@0.1.29"
+                    ],
+                    "ID": "moxcms@0.8.1",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/moxcms@0.8.1",
+                      "UID": "8db3f5d3d571af51"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 570,
+                        "StartLine": 562
+                      }
+                    ],
+                    "Name": "moxcms",
+                    "Relationship": "indirect",
+                    "Version": "0.8.1"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "autocfg@1.5.1"
+                    ],
+                    "ID": "num-traits@0.2.19",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/num-traits@0.2.19",
+                      "UID": "2c18380f2548ab0e"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 579,
+                        "StartLine": 572
+                      }
+                    ],
+                    "Name": "num-traits",
+                    "Relationship": "indirect",
+                    "Version": "0.2.19"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "objc2-encode@4.1.0"
+                    ],
+                    "ID": "objc2@0.6.4",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/objc2@0.6.4",
+                      "UID": "4b417b63e2c2e312"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 588,
+                        "StartLine": 581
+                      }
+                    ],
+                    "Name": "objc2",
+                    "Relationship": "indirect",
+                    "Version": "0.6.4"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "bitflags@2.13.0",
+                      "objc2-core-graphics@0.3.2",
+                      "objc2-foundation@0.3.2",
+                      "objc2@0.6.4"
+                    ],
+                    "ID": "objc2-app-kit@0.3.2",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/objc2-app-kit@0.3.2",
+                      "UID": "122457c4eac0ad25"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 600,
+                        "StartLine": 590
+                      }
+                    ],
+                    "Name": "objc2-app-kit",
+                    "Relationship": "indirect",
+                    "Version": "0.3.2"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "bitflags@2.13.0",
+                      "dispatch2@0.3.1",
+                      "objc2@0.6.4"
+                    ],
+                    "ID": "objc2-core-foundation@0.3.2",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/objc2-core-foundation@0.3.2",
+                      "UID": "b5930cb86992016"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 611,
+                        "StartLine": 602
+                      }
+                    ],
+                    "Name": "objc2-core-foundation",
+                    "Relationship": "indirect",
+                    "Version": "0.3.2"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "bitflags@2.13.0",
+                      "dispatch2@0.3.1",
+                      "objc2-core-foundation@0.3.2",
+                      "objc2-io-surface@0.3.2",
+                      "objc2@0.6.4"
+                    ],
+                    "ID": "objc2-core-graphics@0.3.2",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/objc2-core-graphics@0.3.2",
+                      "UID": "1ba8cbfbd172bc68"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 624,
+                        "StartLine": 613
+                      }
+                    ],
+                    "Name": "objc2-core-graphics",
+                    "Relationship": "indirect",
+                    "Version": "0.3.2"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "objc2-encode@4.1.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/objc2-encode@4.1.0",
+                      "UID": "287fd2a0e215f4c3"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 630,
+                        "StartLine": 626
+                      }
+                    ],
+                    "Name": "objc2-encode",
+                    "Relationship": "indirect",
+                    "Version": "4.1.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "bitflags@2.13.0",
+                      "objc2-core-foundation@0.3.2",
+                      "objc2@0.6.4"
+                    ],
+                    "ID": "objc2-foundation@0.3.2",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/objc2-foundation@0.3.2",
+                      "UID": "3e3433b8a3d59050"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 641,
+                        "StartLine": 632
+                      }
+                    ],
+                    "Name": "objc2-foundation",
+                    "Relationship": "indirect",
+                    "Version": "0.3.2"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "bitflags@2.13.0",
+                      "objc2-core-foundation@0.3.2",
+                      "objc2@0.6.4"
+                    ],
+                    "ID": "objc2-io-surface@0.3.2",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/objc2-io-surface@0.3.2",
+                      "UID": "460e52f740500d04"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 652,
+                        "StartLine": 643
+                      }
+                    ],
+                    "Name": "objc2-io-surface",
+                    "Relationship": "indirect",
+                    "Version": "0.3.2"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "once_cell_polyfill@1.70.2",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/once_cell_polyfill@1.70.2",
+                      "UID": "b76bbaf161ce43a7"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 658,
+                        "StartLine": 654
+                      }
+                    ],
+                    "Name": "once_cell_polyfill",
+                    "Relationship": "indirect",
+                    "Version": "1.70.2"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "option-ext@0.2.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/option-ext@0.2.0",
+                      "UID": "286b7d79e2163163"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 664,
+                        "StartLine": 660
+                      }
+                    ],
+                    "Name": "option-ext",
+                    "Relationship": "indirect",
+                    "Version": "0.2.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "lock_api@0.4.14",
+                      "parking_lot_core@0.9.12"
+                    ],
+                    "ID": "parking_lot@0.12.5",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/parking_lot@0.12.5",
+                      "UID": "495fba2bf94167c6"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 674,
+                        "StartLine": 666
+                      }
+                    ],
+                    "Name": "parking_lot",
+                    "Relationship": "indirect",
+                    "Version": "0.12.5"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "cfg-if@1.0.4",
+                      "libc@0.2.186",
+                      "redox_syscall@0.5.18",
+                      "smallvec@1.15.2",
+                      "windows-link@0.2.1"
+                    ],
+                    "ID": "parking_lot_core@0.9.12",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/parking_lot_core@0.9.12",
+                      "UID": "15559a4229a73498"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 687,
+                        "StartLine": 676
+                      }
+                    ],
+                    "Name": "parking_lot_core",
+                    "Relationship": "indirect",
+                    "Version": "0.9.12"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "paste@1.0.15",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/paste@1.0.15",
+                      "UID": "1389aeb4481e8877"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 693,
+                        "StartLine": 689
+                      }
+                    ],
+                    "Name": "paste",
+                    "Relationship": "indirect",
+                    "Version": "1.0.15"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "percent-encoding@2.3.2",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/percent-encoding@2.3.2",
+                      "UID": "4b0df35a1394b17f"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 699,
+                        "StartLine": 695
+                      }
+                    ],
+                    "Name": "percent-encoding",
+                    "Relationship": "indirect",
+                    "Version": "2.3.2"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "pin-project-lite@0.2.17",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/pin-project-lite@0.2.17",
+                      "UID": "46935d6c8daf8d40"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 705,
+                        "StartLine": 701
+                      }
+                    ],
+                    "Name": "pin-project-lite",
+                    "Relationship": "indirect",
+                    "Version": "0.2.17"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "bitflags@2.13.0",
+                      "crc32fast@1.5.0",
+                      "fdeflate@0.3.7",
+                      "flate2@1.1.9",
+                      "miniz_oxide@0.8.9"
+                    ],
+                    "ID": "png@0.18.1",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/png@0.18.1",
+                      "UID": "862258f14d55b738"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 733,
+                        "StartLine": 722
+                      }
+                    ],
+                    "Name": "png",
+                    "Relationship": "indirect",
+                    "Version": "0.18.1"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "unicode-ident@1.0.24"
+                    ],
+                    "ID": "proc-macro2@1.0.106",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/proc-macro2@1.0.106",
+                      "UID": "c02d03c4bb885ee2"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 742,
+                        "StartLine": 735
+                      }
+                    ],
+                    "Name": "proc-macro2",
+                    "Relationship": "indirect",
+                    "Version": "1.0.106"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "pxfm@0.1.29",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/pxfm@0.1.29",
+                      "UID": "a554ad8d3cd9dc4c"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 748,
+                        "StartLine": 744
+                      }
+                    ],
+                    "Name": "pxfm",
+                    "Relationship": "indirect",
+                    "Version": "0.1.29"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "quick-error@2.0.1",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/quick-error@2.0.1",
+                      "UID": "eeb35bc767c0f7ad"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 754,
+                        "StartLine": 750
+                      }
+                    ],
+                    "Name": "quick-error",
+                    "Relationship": "indirect",
+                    "Version": "2.0.1"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "proc-macro2@1.0.106"
+                    ],
+                    "ID": "quote@1.0.46",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/quote@1.0.46",
+                      "UID": "94a0313cbfa1caf1"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 763,
+                        "StartLine": 756
+                      }
+                    ],
+                    "Name": "quote",
+                    "Relationship": "indirect",
+                    "Version": "1.0.46"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "bitflags@2.13.0"
+                    ],
+                    "ID": "redox_syscall@0.5.18",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/redox_syscall@0.5.18",
+                      "UID": "55b02ab878e97780"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 793,
+                        "StartLine": 786
+                      }
+                    ],
+                    "Name": "redox_syscall",
+                    "Relationship": "indirect",
+                    "Version": "0.5.18"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "getrandom@0.2.17",
+                      "libredox@0.1.18",
+                      "thiserror@1.0.69"
+                    ],
+                    "ID": "redox_users@0.4.6",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/redox_users@0.4.6",
+                      "UID": "2f84fbd60ff4fecf"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 804,
+                        "StartLine": 795
+                      }
+                    ],
+                    "Name": "redox_users",
+                    "Relationship": "indirect",
+                    "Version": "0.4.6"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "bitflags@2.13.0",
+                      "errno@0.3.14",
+                      "libc@0.2.186",
+                      "linux-raw-sys@0.4.15",
+                      "windows-sys@0.59.0"
+                    ],
+                    "ID": "rustix@0.38.44",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/rustix@0.38.44",
+                      "UID": "973280d735b18a29"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 817,
+                        "StartLine": 806
+                      }
+                    ],
+                    "Name": "rustix",
+                    "Relationship": "indirect",
+                    "Version": "0.38.44"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "bitflags@2.13.0",
+                      "errno@0.3.14",
+                      "libc@0.2.186",
+                      "linux-raw-sys@0.12.1",
+                      "windows-sys@0.61.2"
+                    ],
+                    "ID": "rustix@1.1.4",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/rustix@1.1.4",
+                      "UID": "127ab9895727879d"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 830,
+                        "StartLine": 819
+                      }
+                    ],
+                    "Name": "rustix",
+                    "Relationship": "indirect",
+                    "Version": "1.1.4"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "rustversion@1.0.22",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/rustversion@1.0.22",
+                      "UID": "9d26852bd8c0b403"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 836,
+                        "StartLine": 832
+                      }
+                    ],
+                    "Name": "rustversion",
+                    "Relationship": "indirect",
+                    "Version": "1.0.22"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "ryu@1.0.23",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/ryu@1.0.23",
+                      "UID": "42b41616a24bb06"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 842,
+                        "StartLine": 838
+                      }
+                    ],
+                    "Name": "ryu",
+                    "Relationship": "indirect",
+                    "Version": "1.0.23"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "scopeguard@1.2.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/scopeguard@1.2.0",
+                      "UID": "146e6af769b2e044"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 848,
+                        "StartLine": 844
+                      }
+                    ],
+                    "Name": "scopeguard",
+                    "Relationship": "indirect",
+                    "Version": "1.2.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "serde_derive@1.0.228"
+                    ],
+                    "ID": "serde_core@1.0.228",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/serde_core@1.0.228",
+                      "UID": "cbb0e8de3570f433"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 867,
+                        "StartLine": 860
+                      }
+                    ],
+                    "Name": "serde_core",
+                    "Relationship": "indirect",
+                    "Version": "1.0.228"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "proc-macro2@1.0.106",
+                      "quote@1.0.46",
+                      "syn@2.0.118"
+                    ],
+                    "ID": "serde_derive@1.0.228",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/serde_derive@1.0.228",
+                      "UID": "a924f2e32d65642f"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 878,
+                        "StartLine": 869
+                      }
+                    ],
+                    "Name": "serde_derive",
+                    "Relationship": "indirect",
+                    "Version": "1.0.228"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "libc@0.2.186",
+                      "signal-hook-registry@1.4.8"
+                    ],
+                    "ID": "signal-hook@0.3.18",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/signal-hook@0.3.18",
+                      "UID": "2ddb43e9c79227e0"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 901,
+                        "StartLine": 893
+                      }
+                    ],
+                    "Name": "signal-hook",
+                    "Relationship": "indirect",
+                    "Version": "0.3.18"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "libc@0.2.186",
+                      "mio@1.2.1",
+                      "signal-hook@0.3.18"
+                    ],
+                    "ID": "signal-hook-mio@0.2.5",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/signal-hook-mio@0.2.5",
+                      "UID": "3f12b929b31628a5"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 912,
+                        "StartLine": 903
+                      }
+                    ],
+                    "Name": "signal-hook-mio",
+                    "Relationship": "indirect",
+                    "Version": "0.2.5"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "errno@0.3.14",
+                      "libc@0.2.186"
+                    ],
+                    "ID": "signal-hook-registry@1.4.8",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/signal-hook-registry@1.4.8",
+                      "UID": "ce30fd5470d16da"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 922,
+                        "StartLine": 914
+                      }
+                    ],
+                    "Name": "signal-hook-registry",
+                    "Relationship": "indirect",
+                    "Version": "1.4.8"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "simd-adler32@0.3.9",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/simd-adler32@0.3.9",
+                      "UID": "454e82332912ebc3"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 928,
+                        "StartLine": 924
+                      }
+                    ],
+                    "Name": "simd-adler32",
+                    "Relationship": "indirect",
+                    "Version": "0.3.9"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "smallvec@1.15.2",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/smallvec@1.15.2",
+                      "UID": "3a097935d434dda7"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 934,
+                        "StartLine": 930
+                      }
+                    ],
+                    "Name": "smallvec",
+                    "Relationship": "indirect",
+                    "Version": "1.15.2"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "libc@0.2.186",
+                      "windows-sys@0.61.2"
+                    ],
+                    "ID": "socket2@0.6.4",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/socket2@0.6.4",
+                      "UID": "32a58b92aa493f5"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 944,
+                        "StartLine": 936
+                      }
+                    ],
+                    "Name": "socket2",
+                    "Relationship": "indirect",
+                    "Version": "0.6.4"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "static_assertions@1.1.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/static_assertions@1.1.0",
+                      "UID": "98004bc7985a77b7"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 950,
+                        "StartLine": 946
+                      }
+                    ],
+                    "Name": "static_assertions",
+                    "Relationship": "indirect",
+                    "Version": "1.1.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "strsim@0.11.1",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/strsim@0.11.1",
+                      "UID": "459495d387b23723"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 956,
+                        "StartLine": 952
+                      }
+                    ],
+                    "Name": "strsim",
+                    "Relationship": "indirect",
+                    "Version": "0.11.1"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "strum_macros@0.26.4"
+                    ],
+                    "ID": "strum@0.26.3",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/strum@0.26.3",
+                      "UID": "a2c17129acb5f8d4"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 965,
+                        "StartLine": 958
+                      }
+                    ],
+                    "Name": "strum",
+                    "Relationship": "indirect",
+                    "Version": "0.26.3"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "heck@0.5.0",
+                      "proc-macro2@1.0.106",
+                      "quote@1.0.46",
+                      "rustversion@1.0.22",
+                      "syn@2.0.118"
+                    ],
+                    "ID": "strum_macros@0.26.4",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/strum_macros@0.26.4",
+                      "UID": "4f3aa42980ba3e4d"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 978,
+                        "StartLine": 967
+                      }
+                    ],
+                    "Name": "strum_macros",
+                    "Relationship": "indirect",
+                    "Version": "0.26.4"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "proc-macro2@1.0.106",
+                      "quote@1.0.46",
+                      "unicode-ident@1.0.24"
+                    ],
+                    "ID": "syn@2.0.118",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/syn@2.0.118",
+                      "UID": "af24c73ea90e64a8"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 989,
+                        "StartLine": 980
+                      }
+                    ],
+                    "Name": "syn",
+                    "Relationship": "indirect",
+                    "Version": "2.0.118"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "thiserror-impl@1.0.69"
+                    ],
+                    "ID": "thiserror@1.0.69",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/thiserror@1.0.69",
+                      "UID": "1c6e3ff4a4e4441b"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 998,
+                        "StartLine": 991
+                      }
+                    ],
+                    "Name": "thiserror",
+                    "Relationship": "indirect",
+                    "Version": "1.0.69"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "proc-macro2@1.0.106",
+                      "quote@1.0.46",
+                      "syn@2.0.118"
+                    ],
+                    "ID": "thiserror-impl@1.0.69",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/thiserror-impl@1.0.69",
+                      "UID": "cc19f746e5fb03e9"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1009,
+                        "StartLine": 1000
+                      }
+                    ],
+                    "Name": "thiserror-impl",
+                    "Relationship": "indirect",
+                    "Version": "1.0.69"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "fax@0.2.7",
+                      "flate2@1.1.9",
+                      "half@2.7.1",
+                      "quick-error@2.0.1",
+                      "weezl@0.1.12",
+                      "zune-jpeg@0.5.15"
+                    ],
+                    "ID": "tiff@0.11.3",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/tiff@0.11.3",
+                      "UID": "2042a8a22f35eb0a"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1023,
+                        "StartLine": 1011
+                      }
+                    ],
+                    "Name": "tiff",
+                    "Relationship": "indirect",
+                    "Version": "0.11.3"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "proc-macro2@1.0.106",
+                      "quote@1.0.46",
+                      "syn@2.0.118"
+                    ],
+                    "ID": "tokio-macros@2.7.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/tokio-macros@2.7.0",
+                      "UID": "b8ffa1210b1605ef"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1051,
+                        "StartLine": 1042
+                      }
+                    ],
+                    "Name": "tokio-macros",
+                    "Relationship": "indirect",
+                    "Version": "2.7.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "unicode-ident@1.0.24",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/unicode-ident@1.0.24",
+                      "UID": "9da8437a609c42af"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1057,
+                        "StartLine": 1053
+                      }
+                    ],
+                    "Name": "unicode-ident",
+                    "Relationship": "indirect",
+                    "Version": "1.0.24"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "unicode-segmentation@1.13.3",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/unicode-segmentation@1.13.3",
+                      "UID": "5a6314f43f3fbd01"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1063,
+                        "StartLine": 1059
+                      }
+                    ],
+                    "Name": "unicode-segmentation",
+                    "Relationship": "indirect",
+                    "Version": "1.13.3"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "itertools@0.13.0",
+                      "unicode-segmentation@1.13.3",
+                      "unicode-width@0.1.14"
+                    ],
+                    "ID": "unicode-truncate@1.1.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/unicode-truncate@1.1.0",
+                      "UID": "997a1b4a5ed18915"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1074,
+                        "StartLine": 1065
+                      }
+                    ],
+                    "Name": "unicode-truncate",
+                    "Relationship": "indirect",
+                    "Version": "1.1.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "unicode-width@0.1.14",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/unicode-width@0.1.14",
+                      "UID": "adf5136d070cba42"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1080,
+                        "StartLine": 1076
+                      }
+                    ],
+                    "Name": "unicode-width",
+                    "Relationship": "indirect",
+                    "Version": "0.1.14"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "utf8parse@0.2.2",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/utf8parse@0.2.2",
+                      "UID": "8e9112c8c0143a4f"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1092,
+                        "StartLine": 1088
+                      }
+                    ],
+                    "Name": "utf8parse",
+                    "Relationship": "indirect",
+                    "Version": "0.2.2"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "wasi@0.11.1+wasi-snapshot-preview1",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/wasi@0.11.1%2Bwasi-snapshot-preview1",
+                      "UID": "7ad17514b8e3c2f5"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1098,
+                        "StartLine": 1094
+                      }
+                    ],
+                    "Name": "wasi",
+                    "Relationship": "indirect",
+                    "Version": "0.11.1+wasi-snapshot-preview1"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "weezl@0.1.12",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/weezl@0.1.12",
+                      "UID": "77b11d3171972840"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1104,
+                        "StartLine": 1100
+                      }
+                    ],
+                    "Name": "weezl",
+                    "Relationship": "indirect",
+                    "Version": "0.1.12"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "winapi-i686-pc-windows-gnu@0.4.0",
+                      "winapi-x86_64-pc-windows-gnu@0.4.0"
+                    ],
+                    "ID": "winapi@0.3.9",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/winapi@0.3.9",
+                      "UID": "6d28789c5e445616"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1114,
+                        "StartLine": 1106
+                      }
+                    ],
+                    "Name": "winapi",
+                    "Relationship": "indirect",
+                    "Version": "0.3.9"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "winapi-i686-pc-windows-gnu@0.4.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/winapi-i686-pc-windows-gnu@0.4.0",
+                      "UID": "120a89e1f8c9161e"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1120,
+                        "StartLine": 1116
+                      }
+                    ],
+                    "Name": "winapi-i686-pc-windows-gnu",
+                    "Relationship": "indirect",
+                    "Version": "0.4.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "winapi-x86_64-pc-windows-gnu@0.4.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/winapi-x86_64-pc-windows-gnu@0.4.0",
+                      "UID": "10805f94dd74e85"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1126,
+                        "StartLine": 1122
+                      }
+                    ],
+                    "Name": "winapi-x86_64-pc-windows-gnu",
+                    "Relationship": "indirect",
+                    "Version": "0.4.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "windows-link@0.2.1",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/windows-link@0.2.1",
+                      "UID": "8da53ad4b37a2d8e"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1132,
+                        "StartLine": 1128
+                      }
+                    ],
+                    "Name": "windows-link",
+                    "Relationship": "indirect",
+                    "Version": "0.2.1"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "windows-targets@0.48.5"
+                    ],
+                    "ID": "windows-sys@0.48.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/windows-sys@0.48.0",
+                      "UID": "b012d0018a5c0e7b"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1141,
+                        "StartLine": 1134
+                      }
+                    ],
+                    "Name": "windows-sys",
+                    "Relationship": "indirect",
+                    "Version": "0.48.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "windows-targets@0.52.6"
+                    ],
+                    "ID": "windows-sys@0.59.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/windows-sys@0.59.0",
+                      "UID": "8262c5c6e0bca440"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1150,
+                        "StartLine": 1143
+                      }
+                    ],
+                    "Name": "windows-sys",
+                    "Relationship": "indirect",
+                    "Version": "0.59.0"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "windows-link@0.2.1"
+                    ],
+                    "ID": "windows-sys@0.61.2",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/windows-sys@0.61.2",
+                      "UID": "6514bca12826a18c"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1159,
+                        "StartLine": 1152
+                      }
+                    ],
+                    "Name": "windows-sys",
+                    "Relationship": "indirect",
+                    "Version": "0.61.2"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "windows_aarch64_gnullvm@0.48.5",
+                      "windows_aarch64_msvc@0.48.5",
+                      "windows_i686_gnu@0.48.5",
+                      "windows_i686_msvc@0.48.5",
+                      "windows_x86_64_gnu@0.48.5",
+                      "windows_x86_64_gnullvm@0.48.5",
+                      "windows_x86_64_msvc@0.48.5"
+                    ],
+                    "ID": "windows-targets@0.48.5",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/windows-targets@0.48.5",
+                      "UID": "bcc978126a07979c"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1174,
+                        "StartLine": 1161
+                      }
+                    ],
+                    "Name": "windows-targets",
+                    "Relationship": "indirect",
+                    "Version": "0.48.5"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "windows_aarch64_gnullvm@0.52.6",
+                      "windows_aarch64_msvc@0.52.6",
+                      "windows_i686_gnu@0.52.6",
+                      "windows_i686_gnullvm@0.52.6",
+                      "windows_i686_msvc@0.52.6",
+                      "windows_x86_64_gnu@0.52.6",
+                      "windows_x86_64_gnullvm@0.52.6",
+                      "windows_x86_64_msvc@0.52.6"
+                    ],
+                    "ID": "windows-targets@0.52.6",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/windows-targets@0.52.6",
+                      "UID": "88413c46e0183bc1"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1190,
+                        "StartLine": 1176
+                      }
+                    ],
+                    "Name": "windows-targets",
+                    "Relationship": "indirect",
+                    "Version": "0.52.6"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "windows_aarch64_gnullvm@0.48.5",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/windows_aarch64_gnullvm@0.48.5",
+                      "UID": "48435030d7e6fd55"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1196,
+                        "StartLine": 1192
+                      }
+                    ],
+                    "Name": "windows_aarch64_gnullvm",
+                    "Relationship": "indirect",
+                    "Version": "0.48.5"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "windows_aarch64_gnullvm@0.52.6",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/windows_aarch64_gnullvm@0.52.6",
+                      "UID": "547085575db1475e"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1202,
+                        "StartLine": 1198
+                      }
+                    ],
+                    "Name": "windows_aarch64_gnullvm",
+                    "Relationship": "indirect",
+                    "Version": "0.52.6"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "windows_aarch64_msvc@0.48.5",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/windows_aarch64_msvc@0.48.5",
+                      "UID": "b08b7efc304eee6d"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1208,
+                        "StartLine": 1204
+                      }
+                    ],
+                    "Name": "windows_aarch64_msvc",
+                    "Relationship": "indirect",
+                    "Version": "0.48.5"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "windows_aarch64_msvc@0.52.6",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/windows_aarch64_msvc@0.52.6",
+                      "UID": "3db5eea3fb15ca75"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1214,
+                        "StartLine": 1210
+                      }
+                    ],
+                    "Name": "windows_aarch64_msvc",
+                    "Relationship": "indirect",
+                    "Version": "0.52.6"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "windows_i686_gnu@0.48.5",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/windows_i686_gnu@0.48.5",
+                      "UID": "7ab3e81d0ccd7f34"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1220,
+                        "StartLine": 1216
+                      }
+                    ],
+                    "Name": "windows_i686_gnu",
+                    "Relationship": "indirect",
+                    "Version": "0.48.5"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "windows_i686_gnu@0.52.6",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/windows_i686_gnu@0.52.6",
+                      "UID": "f74b4968bf11b53f"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1226,
+                        "StartLine": 1222
+                      }
+                    ],
+                    "Name": "windows_i686_gnu",
+                    "Relationship": "indirect",
+                    "Version": "0.52.6"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "windows_i686_gnullvm@0.52.6",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/windows_i686_gnullvm@0.52.6",
+                      "UID": "890c47f7bd0400d2"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1232,
+                        "StartLine": 1228
+                      }
+                    ],
+                    "Name": "windows_i686_gnullvm",
+                    "Relationship": "indirect",
+                    "Version": "0.52.6"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "windows_i686_msvc@0.48.5",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/windows_i686_msvc@0.48.5",
+                      "UID": "b9e1eea9ddb9c134"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1238,
+                        "StartLine": 1234
+                      }
+                    ],
+                    "Name": "windows_i686_msvc",
+                    "Relationship": "indirect",
+                    "Version": "0.48.5"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "windows_i686_msvc@0.52.6",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/windows_i686_msvc@0.52.6",
+                      "UID": "44388d9d0c3119ae"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1244,
+                        "StartLine": 1240
+                      }
+                    ],
+                    "Name": "windows_i686_msvc",
+                    "Relationship": "indirect",
+                    "Version": "0.52.6"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "windows_x86_64_gnu@0.48.5",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/windows_x86_64_gnu@0.48.5",
+                      "UID": "ae322d805579d1cc"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1250,
+                        "StartLine": 1246
+                      }
+                    ],
+                    "Name": "windows_x86_64_gnu",
+                    "Relationship": "indirect",
+                    "Version": "0.48.5"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "windows_x86_64_gnu@0.52.6",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/windows_x86_64_gnu@0.52.6",
+                      "UID": "5acb1d2edcdd4a63"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1256,
+                        "StartLine": 1252
+                      }
+                    ],
+                    "Name": "windows_x86_64_gnu",
+                    "Relationship": "indirect",
+                    "Version": "0.52.6"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "windows_x86_64_gnullvm@0.48.5",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/windows_x86_64_gnullvm@0.48.5",
+                      "UID": "322e0a3b4b645cd0"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1262,
+                        "StartLine": 1258
+                      }
+                    ],
+                    "Name": "windows_x86_64_gnullvm",
+                    "Relationship": "indirect",
+                    "Version": "0.48.5"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "windows_x86_64_gnullvm@0.52.6",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/windows_x86_64_gnullvm@0.52.6",
+                      "UID": "3a9780ea09afd0b7"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1268,
+                        "StartLine": 1264
+                      }
+                    ],
+                    "Name": "windows_x86_64_gnullvm",
+                    "Relationship": "indirect",
+                    "Version": "0.52.6"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "windows_x86_64_msvc@0.48.5",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/windows_x86_64_msvc@0.48.5",
+                      "UID": "e61031128c32df6f"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1274,
+                        "StartLine": 1270
+                      }
+                    ],
+                    "Name": "windows_x86_64_msvc",
+                    "Relationship": "indirect",
+                    "Version": "0.48.5"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "windows_x86_64_msvc@0.52.6",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/windows_x86_64_msvc@0.52.6",
+                      "UID": "d3cfe15aa97a7224"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1280,
+                        "StartLine": 1276
+                      }
+                    ],
+                    "Name": "windows_x86_64_msvc",
+                    "Relationship": "indirect",
+                    "Version": "0.52.6"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "gethostname@1.1.0",
+                      "rustix@1.1.4",
+                      "x11rb-protocol@0.13.2"
+                    ],
+                    "ID": "x11rb@0.13.2",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/x11rb@0.13.2",
+                      "UID": "19b41735b584ddda"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1291,
+                        "StartLine": 1282
+                      }
+                    ],
+                    "Name": "x11rb",
+                    "Relationship": "indirect",
+                    "Version": "0.13.2"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "x11rb-protocol@0.13.2",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/x11rb-protocol@0.13.2",
+                      "UID": "30e0e33e40e00984"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1297,
+                        "StartLine": 1293
+                      }
+                    ],
+                    "Name": "x11rb-protocol",
+                    "Relationship": "indirect",
+                    "Version": "0.13.2"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "zerocopy-derive@0.8.52"
+                    ],
+                    "ID": "zerocopy@0.8.52",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/zerocopy@0.8.52",
+                      "UID": "6a1bb29894e5b4f4"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1306,
+                        "StartLine": 1299
+                      }
+                    ],
+                    "Name": "zerocopy",
+                    "Relationship": "indirect",
+                    "Version": "0.8.52"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "proc-macro2@1.0.106",
+                      "quote@1.0.46",
+                      "syn@2.0.118"
+                    ],
+                    "ID": "zerocopy-derive@0.8.52",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/zerocopy-derive@0.8.52",
+                      "UID": "50cc7817f90ce313"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1317,
+                        "StartLine": 1308
+                      }
+                    ],
+                    "Name": "zerocopy-derive",
+                    "Relationship": "indirect",
+                    "Version": "0.8.52"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "zmij@1.0.21",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/zmij@1.0.21",
+                      "UID": "ad2788100f74ee41"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1323,
+                        "StartLine": 1319
+                      }
+                    ],
+                    "Name": "zmij",
+                    "Relationship": "indirect",
+                    "Version": "1.0.21"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "zune-core@0.5.1",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/zune-core@0.5.1",
+                      "UID": "3b9e87dfc8a5d601"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1329,
+                        "StartLine": 1325
+                      }
+                    ],
+                    "Name": "zune-core",
+                    "Relationship": "indirect",
+                    "Version": "0.5.1"
+                  },
+                  {
+                    "AnalyzedBy": "cargo",
+                    "DependsOn": [
+                      "zune-core@0.5.1"
+                    ],
+                    "ID": "zune-jpeg@0.5.15",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/zune-jpeg@0.5.15",
+                      "UID": "44b49fc888c0ce54"
+                    },
+                    "Indirect": true,
+                    "Locations": [
+                      {
+                        "EndLine": 1338,
+                        "StartLine": 1331
+                      }
+                    ],
+                    "Name": "zune-jpeg",
+                    "Relationship": "indirect",
+                    "Version": "0.5.15"
+                  }
+                ],
+                "Target": "Cargo.lock",
+                "Type": "cargo"
+              },
+              {
+                "Class": "lang-pkgs",
+                "Packages": [
+                  {
+                    "AnalyzedBy": "cargo",
+                    "ID": "playhouse-fixture-rust@0.0.0",
+                    "Identifier": {
+                      "PURL": "pkg:cargo/playhouse-fixture-rust@0.0.0",
+                      "UID": "d3d35072895b0488"
+                    },
+                    "Locations": [
+                      {
+                        "EndLine": 7,
+                        "StartLine": 5
+                      }
+                    ],
+                    "Name": "playhouse-fixture-rust",
+                    "Relationship": "root",
+                    "Version": "0.0.0"
+                  }
+                ],
+                "Target": "tests/fixtures/rust-app/Cargo.lock",
+                "Type": "cargo"
+              }
+            ],
+            "SchemaVersion": 2,
+            "Trivy": {
+              "Version": "0.72.0"
+            }
+          },
+          "summary": {
+            "secrets": 0,
+            "vulnerabilities": 0
+          }
+        },
+        "skipped": false
+      },
+      {
+        "engine": "functional",
+        "exit_code": 0,
+        "metrics": {
+          "engine": "functional",
+          "noTests": false,
+          "passed": true,
+          "roots": {
+            "scan": "C:\\Users\\lifa2\\OneDrive\\Desktop\\playhouse cli",
+            "test": "C:\\Users\\lifa2\\OneDrive\\Desktop\\playhouse cli",
+            "workspace": "C:\\Users\\lifa2\\OneDrive\\Desktop\\playhouse cli"
+          },
+          "runner": "cargo-test",
+          "stats": {
+            "failed": 0,
+            "passed": 27,
+            "skipped": 0,
+            "total": 27
+          }
+        },
+        "skipped": false
+      },
+      {
+        "engine": "arkenar",
+        "exit_code": 0,
+        "metrics": {
+          "reason": "not-applicable: browser audits N/A for rust stack",
+          "skipped": true
+        },
+        "skipped": true
+      },
+      {
+        "engine": "lighthouse",
+        "exit_code": 0,
+        "metrics": {
+          "reason": "not-applicable: browser audits N/A for rust stack",
+          "skipped": true
+        },
+        "skipped": true
+      }
+    ],
+    "exitCode": 0,
+    "playhouseScore": {
+      "categories": [
+        {
+          "details": [
+            "4/4 tools ready"
+          ],
+          "id": "tools",
+          "label": "Toolchain",
+          "skipped": false,
+          "stars": 100,
+          "summary": "4/4 tools ready",
+          "weight": 0.1
+        },
+        {
+          "details": [
+            "Vulnerabilities (HIGH/CRITICAL): 0",
+            "Secrets detected: 0"
+          ],
+          "id": "security_static",
+          "label": "Security (Trivy)",
+          "skipped": false,
+          "stars": 100,
+          "summary": "No high/critical vulns or secrets",
+          "weight": 0.25
+        },
+        {
+          "details": [
+            "Passed: 27",
+            "Failed: 0"
+          ],
+          "id": "functional",
+          "label": "Functional (cargo-test)",
+          "skipped": false,
+          "stars": 100,
+          "summary": "27 passed, 0 failed, 0 skipped",
+          "weight": 0.25
+        }
+      ],
+      "grade": "Production Ready",
+      "grade_emoji": "*****",
+      "methodology": "Playhouse Stars (0-100) combine weighted category scores inspired by Lighthouse. Each engine normalizes to 0-100, then categories are weighted (Security 45%, Functional 25%, Performance and UX 20%, Toolchain 10%). Skipped engines are excluded and weights rebalance. 90+ Production Ready, 75+ Good, 60+ Fair, 40+ Needs Work, below 40 Critical.",
+      "passed": true,
+      "stars": 100,
+      "why": [
+        "Overall: 100/100 (Production Ready)",
+        "Strong Toolchain: 100/100 (4/4 tools ready)",
+        "Strong Security (Trivy): 100/100 (No high/critical vulns or secrets)",
+        "Strong Functional (cargo-test): 100/100 (27 passed, 0 failed, 0 skipped)"
+      ]
+    }
+  },
+  "doctor": [
+    {
+      "detail": "cargo local build v0.1.0 (C:\\Users\\lifa2\\OneDrive\\Desktop\\playhouse cli\\target\\release\\playhouse.exe)",
+      "name": "Playhouse CLI",
+      "status": "pass"
+    },
+    {
+      "detail": "bundled: Version: 0.72.0",
+      "name": "Trivy",
+      "status": "pass"
+    },
+    {
+      "detail": "bundled - MIT Rust scanner",
+      "name": "Arkenar DAST",
+      "status": "pass"
+    },
+    {
+      "detail": "cargo 1.92.0 (344c4567c 2025-10-21)",
+      "name": "cargo",
+      "status": "pass"
+    }
+  ],
+  "exitCode": 0,
+  "generatedAt": "1783315878",
+  "handoffChecklist": [
+    {
+      "id": "playhouse_skill",
+      "required": true,
+      "task": "Read .playhouse/SKILL.md (recommended)"
+    },
+    {
+      "id": "doctor",
+      "required": true,
+      "task": "Tools healthy (playhouse doctor --json)"
+    },
+    {
+      "id": "verify",
+      "required": true,
+      "task": "Full verify passed (playhouse verify --json)"
+    },
+    {
+      "id": "stars",
+      "required": true,
+      "task": "Playhouse Stars >= 75/100"
+    },
+    {
+      "id": "secrets",
+      "required": true,
+      "task": "No Trivy secrets or HIGH/CRITICAL vulns"
+    },
+    {
+      "id": "playwright",
+      "required": false,
+      "task": "All Playwright tests pass"
+    },
+    {
+      "id": "brief",
+      "required": false,
+      "task": "BRIEF.md exported (.playhouse/BRIEF.md)"
+    },
+    {
+      "id": "agent_json",
+      "required": true,
+      "task": "AGENT.json handoff bundle (.playhouse/AGENT.json)"
+    },
+    {
+      "id": "stay_on_track",
+      "required": true,
+      "task": ".playhouse/stay-on-track skill and PROJECT.md complete"
+    }
+  ],
+  "passed": true,
+  "paths": {
+    "agentManifest": "playhouse agent --json",
+    "brief": "C:\\Users\\lifa2\\OneDrive\\Desktop\\playhouse cli\\.playhouse\\BRIEF.md",
+    "scoreReport": "C:\\Users\\lifa2\\OneDrive\\Desktop\\playhouse cli\\.playhouse\\reports\\score.json"
+  },
+  "playhouseScore": {
+    "categories": [
+      {
+        "details": [
+          "4/4 tools ready"
+        ],
+        "id": "tools",
+        "label": "Toolchain",
+        "skipped": false,
+        "stars": 100,
+        "summary": "4/4 tools ready",
+        "weight": 0.1
+      },
+      {
+        "details": [
+          "Vulnerabilities (HIGH/CRITICAL): 0",
+          "Secrets detected: 0"
+        ],
+        "id": "security_static",
+        "label": "Security (Trivy)",
+        "skipped": false,
+        "stars": 100,
+        "summary": "No high/critical vulns or secrets",
+        "weight": 0.25
+      },
+      {
+        "details": [
+          "Passed: 27",
+          "Failed: 0"
+        ],
+        "id": "functional",
+        "label": "Functional (cargo-test)",
+        "skipped": false,
+        "stars": 100,
+        "summary": "27 passed, 0 failed, 0 skipped",
+        "weight": 0.25
+      }
+    ],
+    "grade": "Production Ready",
+    "grade_emoji": "*****",
+    "methodology": "Playhouse Stars (0-100) combine weighted category scores inspired by Lighthouse. Each engine normalizes to 0-100, then categories are weighted (Security 45%, Functional 25%, Performance and UX 20%, Toolchain 10%). Skipped engines are excluded and weights rebalance. 90+ Production Ready, 75+ Good, 60+ Fair, 40+ Needs Work, below 40 Critical.",
+    "passed": true,
+    "stars": 100,
+    "why": [
+      "Overall: 100/100 (Production Ready)",
+      "Strong Toolchain: 100/100 (4/4 tools ready)",
+      "Strong Security (Trivy): 100/100 (No high/critical vulns or secrets)",
+      "Strong Functional (cargo-test): 100/100 (27 passed, 0 failed, 0 skipped)"
+    ]
+  },
+  "readOrder": [
+    {
+      "action": "read",
+      "step": 1,
+      "target": "C:\\Users\\lifa2\\OneDrive\\Desktop\\playhouse cli\\.playhouse\\SKILL.md",
+      "why": "Playhouse agent skill (recommended) - how to use this CLI"
+    },
+    {
+      "action": "run",
+      "step": 2,
+      "target": "playhouse agent --json",
+      "why": "Full manifest and workflow"
+    },
+    {
+      "action": "read",
+      "step": 3,
+      "target": ".playhouse/BRIEF.md",
+      "why": "Workspace QA summary"
+    },
+    {
+      "action": "read",
+      "step": 4,
+      "target": "C:\\Users\\lifa2\\OneDrive\\Desktop\\playhouse cli\\.playhouse\\stay-on-track\\SKILL.md",
+      "why": "Stay-on-track skill rules"
+    },
+    {
+      "action": "read",
+      "step": 5,
+      "target": "C:\\Users\\lifa2\\OneDrive\\Desktop\\playhouse cli\\.playhouse\\stay-on-track\\PROJECT.md",
+      "why": "Complete project info with user"
+    },
+    {
+      "action": "run",
+      "step": 6,
+      "target": "playhouse doctor --json",
+      "why": "Confirm tools before QA"
+    },
+    {
+      "action": "run",
+      "step": 7,
+      "target": "playhouse verify --json",
+      "why": "Full audit before handoff"
+    }
+  ],
+  "settings": {
+    "accent_color": "teal",
+    "agent_mode": false,
+    "arkenar_advanced_mode": false,
+    "arkenar_js_analysis": true,
+    "arkenar_max_urls": 40,
+    "arkenar_param_fuzz": true,
+    "arkenar_rate_limit": 50,
+    "auto_export_agent_brief": false,
+    "auto_export_handoff_json": true,
+    "auto_init_workspace": true,
+    "auto_install_tools": true,
+    "auto_run_doctor_on_start": false,
+    "bell_enabled": true,
+    "default_lighthouse_url": null,
+    "desktop_notify_enabled": false,
+    "json_output_default": false,
+    "last_workspace": "C:\\Users\\lifa2\\AppData\\Local\\Temp\\playhouse-tui-it-27420",
+    "light_theme": true,
+    "lighthouse_threshold": 0.5,
+    "max_advisory_history": 200,
+    "package_manager": "auto",
+    "playhouse_skill_dir": "",
+    "playhouse_skill_enabled": true,
+    "playwright_reporter": "json",
+    "show_tool_output_in_feed": true,
+    "skip_arkenar_in_verify": false,
+    "skip_lighthouse_in_verify": false,
+    "skip_lighthouse_without_server": true,
+    "skip_playwright_in_verify": false,
+    "skip_trivy_in_verify": false,
+    "star_pass_threshold": 75,
+    "stay_on_track_enabled": false,
+    "stay_on_track_skill_dir": "stay-on-track",
+    "trivy_severity": "HIGH,CRITICAL"
+  },
+  "stack": {
+    "browserAudits": false,
+    "functionalRunner": "cargo-test",
+    "language": "rust",
+    "signals": [
+      "Cargo.toml"
+    ],
+    "stack": "rust"
+  },
+  "workspace": {
+    "advisoriesPath": ".playhouse/advisories.log",
+    "agentNotes": null,
+    "agentPath": ".playhouse/AGENT.json",
+    "briefPath": ".playhouse/BRIEF.md",
+    "browserAudits": false,
+    "configPath": ".playhouse/config.json",
+    "defaultUrl": null,
+    "functionalRunner": "cargo-test",
+    "functionalRunnerOverride": null,
+    "initialized": true,
+    "language": "rust",
+    "path": "C:\\Users\\lifa2\\OneDrive\\Desktop\\playhouse cli",
+    "playhouseDir": "C:\\Users\\lifa2\\OneDrive\\Desktop\\playhouse cli\\.playhouse",
+    "projectName": "playhouse cli",
+    "resolvedScanRoot": "C:\\Users\\lifa2\\OneDrive\\Desktop\\playhouse cli",
+    "resolvedTestRoot": "C:\\Users\\lifa2\\OneDrive\\Desktop\\playhouse cli",
+    "scanRoot": null,
+    "scoreReportPath": ".playhouse/reports/score.json",
+    "signals": [
+      "Cargo.toml"
+    ],
+    "stack": "rust",
+    "testRoot": null,
+    "verifyUrl": null
+  },
+  "workspaceConfig": {
+    "agent_notes": null,
+    "default_url": null,
+    "functional_runner": null,
+    "initialized": true,
+    "playhouse_skill": true,
+    "project_name": "playhouse cli",
+    "scan_root": null,
+    "stay_on_track": true,
+    "test_root": null
+  }
+}

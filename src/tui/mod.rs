@@ -15,6 +15,9 @@ mod ui;
 mod ui_blocks;
 mod walk;
 
+#[cfg(test)]
+mod integration_tests;
+
 use std::io;
 use std::time::Duration;
 

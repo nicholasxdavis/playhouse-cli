@@ -133,7 +133,7 @@ fn start_task(app: &mut App, task_tx: &mpsc::UnboundedSender<TaskEvent>, kind: T
     spawn_task(kind, app.workspace.clone(), task_tx.clone());
 }
 
-fn slash_label(kind: &TaskKind) -> String {
+pub fn slash_label(kind: &TaskKind) -> String {
     match kind {
         TaskKind::Doctor => "/doctor".into(),
         TaskKind::Install => "/install".into(),

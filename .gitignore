@@ -1,5 +1,7 @@
 /target
-.playhouse
+.playhouse/*
+!.playhouse/AGENT.json
+!.playhouse/BRIEF.md
 packages/playhouse/vendor/
 packages/playhouse/.playhouse/
 tests/**/.playhouse
