@@ -1,11 +1,12 @@
- 
-<p align="center" style="margin-bottom:0;">
-  <img src="https://github.com/nicholasxdavis/playhouse-cli/raw/main/demo/icon/playhouse-logo.png" alt="Playhouse" width="550">
+<p align="center">
+  <img src="https://github.com/nicholasxdavis/playhouse-cli/raw/main/demo/icon/playhouse-logo.png" alt="Playhouse" width="360">
 </p>
-<p align="center" style="margin-top:0;">
-  QA CLI for security, functional testing, performance audits, and agent handoff.<br>
-  Run headless from shell, CI, or agent tooling. Optional TUI for humans.
-</p>
+
+<p align="center">QA CLI for security, functional testing, performance audits, and agent handoff.<br>Run headless from shell, CI, or agent tooling. Optional TUI for humans.</p>
+
+> **If you are an LLM or coding agent, stop reading this file.**  
+> Go to **[AGENTS.md](AGENTS.md)**  it has the full command reference, workflows, exit codes, config keys, and everything you need to operate Playhouse correctly.
+
 ## Install
 
 ```bash
