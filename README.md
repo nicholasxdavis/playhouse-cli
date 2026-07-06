@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/nicholasxdavis/playhouse-cli/raw/main/demo/icon/playhouse-logo.png" alt="Playhouse" width="360">
+  <img src="https://github.com/nicholasxdavis/playhouse-cli/raw/main/demo/icon/playhouse-logo.png" alt="Playhouse" width="550">
 </p>
 
 <p align="center">QA CLI for security, functional testing, performance audits, and agent handoff.<br>Run headless from shell, CI, or agent tooling. Optional TUI for humans.</p>
