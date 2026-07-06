@@ -1,7 +1,17 @@
 <p align="center">
   <img src="https://github.com/nicholasxdavis/playhouse-cli/raw/main/demo/icon/playhouse-logo.png" alt="Playhouse" width="360">
 </p>
-
+<p align="center">
+   <a href="demo/README.es.md">Español</a> •
+   <a href="demo/README.fr.md">Français</a> •
+   <a href="demo/README.de.md">Deutsch</a> •
+   <a href="demo/README.it.md">Italiano</a> •
+   <a href="demo/README.pt.md">Português</a> •
+   <a href="demo/README.ru.md">Русский</a> •
+   <a href="demo/README.zh.md">中文</a> •
+   <a href="demo/README.ja.md">日本語</a> •
+   <a href="demo/README.ko.md">한국어</a>
+</p>
 <p align="center">
   <a href="https://github.com/nicholasxdavis/playhouse-cli/actions/workflows/ci.yml?branch=main">
     <img src="https://img.shields.io/github/actions/workflow/status/nicholasxdavis/playhouse-cli/ci.yml?branch=main&style=for-the-badge&label=CI&color=2bba68" alt="CI Status">
@@ -22,11 +32,8 @@
   Run headless from shell, CI, or agent tooling. Optional TUI for humans.
 </p>
 
-> **If you are an LLM or coding agent, stop reading this file.**  
-> Go to **[AGENTS.md](AGENTS.md)** for the full command reference, workflows, exit codes, and config keys.
-
 <p align="center">
-  <img src="https://github.com/nicholasxdavis/playhouse-cli/blob/main/demo/icon/tui-7-6.png?raw=true" alt="Playhouse CLI Demo">
+  <img src="https://github.com/nicholasxdavis/playhouse-cli/blob/main/demo/icon/tui-7-6.png?raw=true" alt="Playhouse CLI Demo" width="75%">
 </p>
 
 ## Install
