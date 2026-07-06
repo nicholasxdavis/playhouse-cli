@@ -12,9 +12,6 @@
   <a href="https://github.com/nicholasxdavis/playhouse-cli/releases/latest">
     <img src="https://img.shields.io/github/v/release/nicholasxdavis/playhouse-cli?style=for-the-badge&label=Release&color=14949c" alt="GitHub Release">
   </a>
-  <a href="https://github.com/nicholasxdavis/playhouse-cli">
-    <img src="https://img.shields.io/github/stars/nicholasxdavis/playhouse-cli?style=for-the-badge&label=Stars&color=2bba68" alt="GitHub Stars">
-  </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-2bba68.svg?style=for-the-badge" alt="MIT License">
   </a>
