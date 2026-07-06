@@ -1,4 +1,5 @@
 /target
+.dev/
 .playhouse/*
 !.playhouse/AGENT.json
 !.playhouse/BRIEF.md

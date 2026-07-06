@@ -2,6 +2,7 @@
   <img src="https://github.com/nicholasxdavis/playhouse-cli/raw/main/demo/icon/playhouse-logo.png" alt="Playhouse" width="360">
 </p>
 <p align="center">
+   <b>English</b> •
    <a href="demo/README.es.md">Español</a> •
    <a href="demo/README.fr.md">Français</a> •
    <a href="demo/README.de.md">Deutsch</a> •
@@ -76,7 +77,7 @@ Set `PLAYHOUSE_INSTALL_STRICT=1` to fail `npm install` when tool install fails.
 | cargo (developers) | `cargo install --path . --force` |
 | manual binary | set `PLAYHOUSE_BIN` or `PLAYHOUSE_SKIP_DOWNLOAD=1` |
 
-The npm package downloads the native binary (~12 MB) from GitHub Releases on `postinstall`. Current release: **v0.1.2**.
+The npm package downloads the native binary (~12 MB) from GitHub Releases on `postinstall`. Current release: **v0.2.0**.
 
 **From source:**
 
@@ -97,7 +98,7 @@ cd packages/playhouse && npm run link-local   # bash
 
 **CI:** [GitHub Actions](https://github.com/nicholasxdavis/playhouse-cli/actions) runs `cargo test`, npm smoke, and `playhouse verify` on Ubuntu, macOS, and Windows.
 
-**Releases:** push tag `v0.1.2` (must match `Cargo.toml` and `packages/playhouse/package.json`) to publish binaries for npm postinstall.
+**Releases:** push tag `v0.2.0` (must match `Cargo.toml` and `packages/playhouse/package.json`) to publish binaries for npm postinstall.
 
 ## Quick start
 
