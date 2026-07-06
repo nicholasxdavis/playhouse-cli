@@ -2,7 +2,6 @@
   <img src="https://github.com/nicholasxdavis/playhouse-cli/raw/main/demo/icon/playhouse-logo.png" alt="Playhouse" width="550">
 </p>
 <p align="center">
-   <a href="demo/README.md">English</a> •
    <a href="demo/README.es.md">Español</a> •
    <a href="demo/README.fr.md">Français</a> •
    <a href="demo/README.de.md">Deutsch</a> •
