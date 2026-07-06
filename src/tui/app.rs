@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use ratatui::layout::Rect;
+use ratatui::widgets::ListState;
 
 use crate::detect;
 use crate::tui::config::{self, PlayhouseSettings};
@@ -110,6 +111,7 @@ pub struct App {
     pub slash_selected: usize,
     pub help_tab: usize,
     pub help_selected: usize,
+    pub help_list_state: ListState,
     pub advisories: Vec<String>,
     pub tools_summary: String,
     pub mention_index: MentionIndex,
@@ -119,15 +121,13 @@ pub struct App {
     pub doctor_pass_count: Option<(usize, usize)>,
     brief_cache: String,
     brief_cache_valid: bool,
-    pub ctrl_c_streak: u8,
-    ctrl_c_last_tick: u64,
 }
 
 impl App {
-    pub fn new(workspace: &str) -> Self {
+    pub fn new(workspace: &str, after_splash: bool) -> Self {
         let settings = config::load_settings();
         config::apply_theme_from_settings(&settings);
-        let local_server = None;
+        let local_server = detect::find_local_server(workspace);
         let config_options = config::config_options_for_tab(0, &settings);
 
         let mut app = Self {
@@ -164,6 +164,7 @@ impl App {
             slash_selected: 0,
             help_tab: 0,
             help_selected: 0,
+            help_list_state: ListState::default(),
             advisories: load_advisories(workspace),
             tools_summary: "run /doctor to check tools".into(),
             mention_index: MentionIndex::new(workspace),
@@ -173,11 +174,9 @@ impl App {
             doctor_pass_count: None,
             brief_cache: String::new(),
             brief_cache_valid: false,
-            ctrl_c_streak: 0,
-            ctrl_c_last_tick: 0,
         };
 
-        app.push_system(&welcome_message(&app));
+        app.push_system(&welcome_message(&app, after_splash));
         app
     }
 
@@ -185,16 +184,6 @@ impl App {
         self.tick_count = self.tick_count.wrapping_add(1);
         self.animate_feed_scroll();
         self.poll_mention_refresh();
-    }
-
-    pub fn register_ctrl_c(&mut self) -> bool {
-        const WINDOW: u64 = 50;
-        if self.tick_count.saturating_sub(self.ctrl_c_last_tick) > WINDOW {
-            self.ctrl_c_streak = 0;
-        }
-        self.ctrl_c_streak = self.ctrl_c_streak.saturating_add(1);
-        self.ctrl_c_last_tick = self.tick_count;
-        self.ctrl_c_streak >= 3
     }
 
     pub fn needs_animation_frame(&self) -> bool {
@@ -255,6 +244,7 @@ impl App {
     pub fn on_resize(&mut self) {
         self.feed_scroll_dragging = false;
         self.feed_select_dragging = false;
+        self.local_server = detect::find_local_server(&self.workspace);
         self.refresh_feed_scroll_metrics();
         if self.feed_stick_bottom {
             self.scroll_feed_bottom();
@@ -969,7 +959,23 @@ fn char_byte_index(s: &str, char_idx: usize) -> usize {
         .unwrap_or(s.len())
 }
 
-fn welcome_message(app: &App) -> String {
+fn welcome_message(app: &App, after_splash: bool) -> String {
+    let ws_cfg = crate::workspace::load_workspace_config(&app.workspace);
+    let init_hint = if !ws_cfg.initialized {
+        "\nRun /init to set up .playhouse/ in this workspace."
+    } else {
+        ""
+    };
+
+    if after_splash {
+        return format!(
+            "Workspace: {}\n\
+             /help · / slash · @ files · Enter for notes\n\
+             Agents: `playhouse agent --json`{init_hint}",
+            app.workspace
+        );
+    }
+
     let ph = if app.settings.playhouse_skill_enabled {
         ".playhouse skill ON"
     } else {
@@ -984,7 +990,7 @@ fn welcome_message(app: &App) -> String {
         "Playhouse QA CLI - TUI for humans · headless for agents\n\
          Workspace: {}\n\
          /install · /doctor · /verify · /skill · /help · {} · {}\n\
-         Agents: `playhouse agent --json`",
+         Agents: `playhouse agent --json`{init_hint}",
         app.workspace, ph, sot
     )
 }

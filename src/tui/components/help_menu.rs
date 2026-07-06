@@ -1,7 +1,7 @@
 use ratatui::{
     layout::{Constraint, Layout, Rect},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
+    widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
 };
 
@@ -54,7 +54,7 @@ pub fn render(f: &mut Frame, area: Rect, app: &mut App) {
     }
 }
 
-fn render_commands(f: &mut Frame, sub: Rect, body: Rect, footer: Rect, app: &App) {
+fn render_commands(f: &mut Frame, sub: Rect, body: Rect, footer: Rect, app: &mut App) {
     f.render_widget(
         Paragraph::new(Line::from(Span::styled(
             "  Browse slash commands - Enter runs the selected command:",
@@ -82,9 +82,10 @@ fn render_commands(f: &mut Frame, sub: Rect, body: Rect, footer: Rect, app: &App
         })
         .collect();
 
-    let mut state = ListState::default();
+    let mut state = std::mem::take(&mut app.help_list_state);
     state.select(Some(app.help_selected));
     f.render_stateful_widget(List::new(items), body, &mut state);
+    app.help_list_state = state;
 
     f.render_widget(
         Paragraph::new(Line::from(vec![

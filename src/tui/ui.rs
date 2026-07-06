@@ -7,6 +7,7 @@ use ratatui::{
 
 use crate::tui::app::{App, AppMode};
 use crate::tui::components;
+use crate::tui::mascot;
 use crate::tui::theme;
 
 pub fn draw(f: &mut Frame, app: &mut App) {
@@ -32,7 +33,8 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     }
 
     let status_h = 1u16;
-    let header_h = area.height.clamp(3, 6);
+    let header_h = mascot::welcome_header_height(&app.workspace)
+        .min(area.height.saturating_sub(8));
     let max_input = area
         .height
         .saturating_sub(header_h + status_h + 2)

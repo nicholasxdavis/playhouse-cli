@@ -76,9 +76,10 @@ pub fn render(f: &mut Frame, area: Rect, app: &App) {
         width: popup_area.width,
         height: popup_area.height.saturating_sub(1),
     };
+    let list = List::new(items);
     let mut state = ListState::default();
     state.select(Some(app.slash_selected));
-    f.render_widget(List::new(items), list_area);
+    f.render_stateful_widget(list, list_area, &mut state);
 
     let footer_area = Rect {
         x: popup_area.x,

@@ -2,7 +2,7 @@
 
 npm installer and launcher for the [Playhouse](https://github.com/nicholasxdavis/playhouse-cli) Rust CLI. `postinstall` downloads the native binary from [GitHub Releases](https://github.com/nicholasxdavis/playhouse-cli/releases) for your OS and CPU.
 
-**Current version:** 0.1.1 (release tag `v0.1.1`)
+**Current version:** 0.1.2 (release tag `v0.1.2`)
 
 ## Install
 
@@ -44,7 +44,7 @@ node bin/playhouse.js --version
 ## Publish (maintainers)
 
 1. Sync version in `Cargo.toml` and `package.json` (`node scripts/check-version-sync.js`).
-2. Tag and push: `git tag v0.1.1` then `git push origin v0.1.1` (GitHub Actions uploads binaries).
+2. Tag and push: `git tag v0.1.2` then `git push origin v0.1.2` (GitHub Actions uploads binaries).
 3. `cd packages/playhouse && npm publish --access public`
 
 The `playhouse` command name is unchanged after install (see `bin` in `package.json`).

@@ -17,7 +17,7 @@ fn temp_workspace() -> String {
 }
 
 fn test_app() -> App {
-    App::new(&temp_workspace())
+    App::new(&temp_workspace(), false)
 }
 
 fn noop_task_tx() -> mpsc::UnboundedSender<TaskEvent> {
@@ -41,12 +41,9 @@ fn last_system_text(app: &App) -> Option<String> {
 fn keyboard_shortcuts() {
     assert!(is_copy_shortcut(
         KeyCode::Char('c'),
-        KeyModifiers::CONTROL | KeyModifiers::SHIFT
-    ));
-    assert!(!is_copy_shortcut(
-        KeyCode::Char('c'),
         KeyModifiers::CONTROL
     ));
+    assert!(is_paste_shortcut(KeyCode::Char('p'), KeyModifiers::CONTROL));
     assert!(is_paste_shortcut(KeyCode::Char('v'), KeyModifiers::CONTROL));
     assert!(is_paste_shortcut(KeyCode::Insert, KeyModifiers::SHIFT));
 }

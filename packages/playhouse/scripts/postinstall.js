@@ -102,6 +102,43 @@ function chmodUnix(filePath) {
   }
 }
 
+function splashPaths() {
+  return [
+    path.join(ROOT, 'assets', 'splash.txt'),
+    path.join(ROOT, '..', '..', 'splash.txt'),
+  ];
+}
+
+function readSplashArt() {
+  for (const p of splashPaths()) {
+    try {
+      if (fs.existsSync(p)) {
+        return fs.readFileSync(p, 'utf8');
+      }
+    } catch {
+      /* try next */
+    }
+  }
+  return null;
+}
+
+function printInstallSplash(version) {
+  const art = readSplashArt();
+  if (!art) return;
+
+  const cyan = '\x1b[36m';
+  const dim = '\x1b[2m';
+  const reset = '\x1b[0m';
+
+  console.log('');
+  for (const line of art.split(/\r?\n/)) {
+    console.log(`${cyan}${line}${reset}`);
+  }
+  console.log(
+    `${dim}  Playhouse v${version} installed · run \`playhouse\` to start the TUI${reset}\n`,
+  );
+}
+
 async function main() {
   const skip = shouldSkip();
   const { triple, ext, binName } = getReleaseTarget();
@@ -166,6 +203,7 @@ async function main() {
   fs.unlinkSync(archivePath);
 
   log(`Installed native binary to vendor/${binName}`);
+  printInstallSplash(version);
 }
 
 main().catch((err) => {

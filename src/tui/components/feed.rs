@@ -56,9 +56,7 @@ pub fn render(f: &mut Frame, area: Rect, app: &mut App) {
             Span::styled("/", theme::accent()),
             Span::styled(" for QA commands · ", theme::text_dim()),
             Span::styled("@", theme::accent()),
-            Span::styled(" to attach files · drag to select · ", theme::text_dim()),
-            Span::styled("Ctrl+Shift+C", theme::accent()),
-            Span::styled(" copy", theme::text_dim()),
+            Span::styled(" to attach files · drag to select", theme::text_dim()),
         ]));
         f.render_widget(hint, area);
         app.feed_line_count = 0;

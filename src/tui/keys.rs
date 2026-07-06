@@ -6,14 +6,13 @@ use crate::tui::commands::{execute_command, submit_input};
 use crate::tui::tasks::TaskEvent;
 
 pub fn is_copy_shortcut(code: KeyCode, mods: KeyModifiers) -> bool {
-    (code == KeyCode::Char('c')
-        && mods.contains(KeyModifiers::CONTROL)
-        && mods.contains(KeyModifiers::SHIFT))
+    (code == KeyCode::Char('c') && mods.contains(KeyModifiers::CONTROL))
         || (code == KeyCode::Insert && mods.contains(KeyModifiers::CONTROL))
 }
 
 pub fn is_paste_shortcut(code: KeyCode, mods: KeyModifiers) -> bool {
-    (code == KeyCode::Char('v') && mods.contains(KeyModifiers::CONTROL))
+    (code == KeyCode::Char('p') && mods.contains(KeyModifiers::CONTROL))
+        || (code == KeyCode::Char('v') && mods.contains(KeyModifiers::CONTROL))
         || (code == KeyCode::Insert && mods.contains(KeyModifiers::SHIFT))
 }
 
@@ -25,21 +24,7 @@ pub fn handle_normal_key(
 ) {
     let input_empty = app.input_text.is_empty();
     match code {
-        KeyCode::Char('c')
-            if modifiers.contains(KeyModifiers::CONTROL)
-                && !modifiers.contains(KeyModifiers::SHIFT) =>
-        {
-            if app.copy_selection() {
-                app.push_system("Copied selection");
-            } else if app.register_ctrl_c() {
-                app.running = false;
-            } else {
-                let left = 3_u8.saturating_sub(app.ctrl_c_streak);
-                app.push_system(&format!(
-                    "Press Ctrl+C {left} more time(s) to quit · Ctrl+Shift+C copies"
-                ));
-            }
-        }
+        KeyCode::Char('q') if modifiers.contains(KeyModifiers::CONTROL) => app.running = false,
         KeyCode::Char('a') if modifiers.contains(KeyModifiers::CONTROL) => app.select_all_input(),
         KeyCode::Esc => {
             app.input_text.clear();
