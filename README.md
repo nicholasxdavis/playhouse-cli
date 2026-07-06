@@ -40,7 +40,7 @@
 
 ## Install
 
-**Recommended (no Rust required):**
+**Recommended:**
 
 ```bash
 npm install -g playhouse
