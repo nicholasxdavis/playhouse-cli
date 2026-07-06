@@ -14,7 +14,8 @@ use crate::workspace::{self, WorkspaceConfig};
 
 pub fn manifest(workspace: &str) -> Value {
     let settings = load_settings();
-    let ws_config = workspace::load_workspace_config(workspace);
+    let mut ws_config = workspace::load_workspace_config(workspace);
+    workspace::repair_stay_on_track(workspace, &settings, &mut ws_config);
     let profile = project::detect(workspace);
     let checks = detect::run_doctor(workspace);
     let stay = workspace::stay_on_track_status(workspace, &settings);
@@ -446,12 +447,23 @@ fn next_actions(
     profile: &ProjectProfile,
 ) -> Vec<Value> {
     let mut actions = Vec::new();
+    let ws = workspace::load_workspace_config(workspace);
 
-    if !workspace::load_workspace_config(workspace).initialized {
+    if !ws.initialized {
         actions.push(json!({
             "priority": "high",
             "action": "playhouse init --json",
             "reason": "Workspace not initialized",
+        }));
+    }
+
+    if (ws.stay_on_track || settings.stay_on_track_enabled)
+        && !workspace::skill_path(workspace, settings).is_file()
+    {
+        actions.push(json!({
+            "priority": "high",
+            "action": "playhouse stay-on-track enable",
+            "reason": "Stay-on-track enabled but skill files missing",
         }));
     }
 
@@ -536,14 +548,21 @@ fn handoff_checklist(
 ) -> Vec<Value> {
     let sot = ws.stay_on_track || settings.stay_on_track_enabled;
     let ph = ws.playhouse_skill || settings.playhouse_skill_enabled;
-    let needs_pw = profile.needs_playwright() && !settings.skip_playwright_in_verify;
+    let needs_functional =
+        profile.functional_runner != project::FunctionalRunner::None
+            && !settings.skip_playwright_in_verify;
+    let functional_task = if profile.needs_playwright() {
+        "All Playwright tests pass"
+    } else {
+        "All functional tests pass"
+    };
     let mut items = vec![
         json!({ "id": "playhouse_skill", "task": "Read .playhouse/SKILL.md (recommended)", "required": ph }),
         json!({ "id": "doctor", "task": "Tools healthy (playhouse doctor --json)", "required": true }),
         json!({ "id": "verify", "task": "Full verify passed (playhouse verify --json)", "required": true }),
         json!({ "id": "stars", "task": format!("Playhouse Stars >= {}/100", settings.star_pass_threshold), "required": true }),
         json!({ "id": "secrets", "task": "No Trivy secrets or HIGH/CRITICAL vulns", "required": true }),
-        json!({ "id": "playwright", "task": "All Playwright tests pass", "required": needs_pw }),
+        json!({ "id": "functional", "task": functional_task, "required": needs_functional }),
         json!({ "id": "brief", "task": "BRIEF.md exported (.playhouse/BRIEF.md)", "required": false }),
         json!({ "id": "agent_json", "task": "AGENT.json handoff bundle (.playhouse/AGENT.json)", "required": settings.auto_export_handoff_json }),
     ];

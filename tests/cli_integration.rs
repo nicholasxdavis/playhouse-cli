@@ -102,6 +102,15 @@ fn monorepo_scan_root_in_temp_workspace() {
 }
 
 #[test]
+fn playwright_delegates_to_cargo_on_rust_fixture() {
+    let fixture = repo_root().join("tests/fixtures/rust-app");
+    let stdout = run_ok(&["playwright", "--json"], &fixture);
+    let v: serde_json::Value = serde_json::from_str(&stdout).expect("valid JSON");
+    assert_eq!(v["runner"], "cargo-test");
+    assert_eq!(v["stats"]["passed"], 1);
+}
+
+#[test]
 fn upgrade_command_json() {
     let stdout = run_ok(&["upgrade", "--json"], &repo_root());
     let v: serde_json::Value = serde_json::from_str(&stdout).expect("valid JSON");

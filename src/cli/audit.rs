@@ -3,6 +3,7 @@ use crate::cli::context::Context;
 use crate::cli::handlers;
 use crate::cli::output;
 use crate::engines;
+use crate::project::{self, FunctionalRunner};
 use crate::tools;
 use crate::workspace;
 
@@ -12,6 +13,10 @@ pub async fn run_lighthouse(ctx: &Context<'_>, url: Option<String>) -> i32 {
 }
 
 pub async fn run_playwright(ctx: &Context<'_>, pattern: Option<String>) -> i32 {
+    let profile = project::detect(ctx.workspace);
+    if profile.functional_runner != FunctionalRunner::Playwright {
+        return engines::functional::run(ctx.workspace, ctx.json, false).await;
+    }
     engines::playwright::run(ctx.workspace, pattern.as_deref(), ctx.json, false).await
 }
 

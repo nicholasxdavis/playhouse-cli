@@ -290,6 +290,24 @@ pub fn disable_stay_on_track_mode(workspace: &str) -> Result<(), String> {
     save_workspace_config(workspace, &ws_config).map_err(|e| e.to_string())
 }
 
+/// Write stay-on-track skill files when the workspace flag is set but files are missing.
+pub fn repair_stay_on_track(
+    workspace: &str,
+    settings: &PlayhouseSettings,
+    ws_config: &mut WorkspaceConfig,
+) {
+    if !(ws_config.stay_on_track || settings.stay_on_track_enabled) {
+        return;
+    }
+    if skill_path(workspace, settings).is_file() {
+        return;
+    }
+    if let Ok(path) = enable_stay_on_track_mode(workspace, settings) {
+        ws_config.stay_on_track = true;
+        let _ = path;
+    }
+}
+
 pub fn stay_on_track_status(workspace: &str, settings: &PlayhouseSettings) -> serde_json::Value {
     let ws = load_workspace_config(workspace);
     let skill = skill_path(workspace, settings);

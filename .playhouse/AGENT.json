@@ -3,7 +3,7 @@
     "command": "audit",
     "doctor": [
       {
-        "detail": "cargo local build v0.1.0 (C:\\Users\\lifa2\\OneDrive\\Desktop\\playhouse cli\\target\\release\\playhouse.exe)",
+        "detail": "cargo install v0.1.0",
         "name": "Playhouse CLI",
         "status": "pass"
       },
@@ -32,19 +32,19 @@
           "exitCode": 0,
           "passed": true,
           "raw": {
-            "ArtifactID": "sha256:80771aed33c4c9e9d03d52e59a4a2978514560945f6145719f3c361bf6f91419",
+            "ArtifactID": "sha256:cbd4bea0d8a4ee0ab25af8b114e7afd1ac63eaf810a1431f38fa8b79f5c809d4",
             "ArtifactName": ".",
             "ArtifactType": "repository",
-            "CreatedAt": "2026-07-05T23:31:01.0822305-06:00",
+            "CreatedAt": "2026-07-05T23:44:06.3037922-06:00",
             "Metadata": {
               "Author": "nic x <nic@blacnova.net>",
               "Branch": "main",
-              "Commit": "5f06794a6cddc7539ab426a7f013d95f25de14c2",
-              "CommitMsg": "fix clippy warnings + remove dead code , small touch ups",
+              "Commit": "f07e1f12c5b51366c788b176e33ada8f8dad1d33",
+              "CommitMsg": "Split CLI into per-domain modules and add TUI integration tests.\n\nMove command dispatch out of main.rs into cli/* handlers, add keyboard and slash-command integration tests, track the dogfood handoff bundle at 100/100 Production Ready.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
               "Committer": "nic x <nic@blacnova.net>",
               "RepoURL": "https://github.com/nicholasxdavis/playhouse-cli.git"
             },
-            "ReportID": "019f35e8-8e5a-7384-acf5-e87777d70baa",
+            "ReportID": "019f35f4-899f-7c16-99fc-839700b5ced1",
             "Results": [
               {
                 "Class": "lang-pkgs",
@@ -3336,7 +3336,7 @@
   },
   "doctor": [
     {
-      "detail": "cargo local build v0.1.0 (C:\\Users\\lifa2\\OneDrive\\Desktop\\playhouse cli\\target\\release\\playhouse.exe)",
+      "detail": "cargo install v0.1.0",
       "name": "Playhouse CLI",
       "status": "pass"
     },
@@ -3357,7 +3357,7 @@
     }
   ],
   "exitCode": 0,
-  "generatedAt": "1783315878",
+  "generatedAt": "1783316663",
   "handoffChecklist": [
     {
       "id": "playhouse_skill",
@@ -3385,9 +3385,9 @@
       "task": "No Trivy secrets or HIGH/CRITICAL vulns"
     },
     {
-      "id": "playwright",
-      "required": false,
-      "task": "All Playwright tests pass"
+      "id": "functional",
+      "required": true,
+      "task": "All functional tests pass"
     },
     {
       "id": "brief",
@@ -3522,7 +3522,7 @@
     "default_lighthouse_url": null,
     "desktop_notify_enabled": false,
     "json_output_default": false,
-    "last_workspace": "C:\\Users\\lifa2\\AppData\\Local\\Temp\\playhouse-tui-it-27420",
+    "last_workspace": "C:\\Users\\lifa2\\AppData\\Local\\Temp\\playhouse-tui-it-5852",
     "light_theme": true,
     "lighthouse_threshold": 0.5,
     "max_advisory_history": 200,
