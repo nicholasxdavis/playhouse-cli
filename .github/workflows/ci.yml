@@ -57,11 +57,13 @@ jobs:
           save-if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
       - name: Build
+        shell: bash
         env:
           RUST_TARGET: ${{ matrix.target }}
         run: cargo build --release --target "$RUST_TARGET"
 
       - name: Unit and integration tests
+        shell: bash
         env:
           RUST_TARGET: ${{ matrix.target }}
         run: cargo test --target "$RUST_TARGET"
