@@ -2,10 +2,31 @@
   <img src="https://github.com/nicholasxdavis/playhouse-cli/raw/main/demo/icon/playhouse-logo.png" alt="Playhouse" width="550">
 </p>
 
-<p align="center">QA CLI for security, functional testing, performance audits, and agent handoff.<br>Run headless from shell, CI, or agent tooling. Optional TUI for humans.</p>
+<p align="center">
+  <a href="https://github.com/openclaw/openclaw/actions/workflows/ci.yml?branch=main">
+    <img src="https://img.shields.io/github/actions/workflow/status/openclaw/openclaw/ci.yml?branch=main&style=for-the-badge&label=CI&color=%232bba68" alt="CI Status">
+  </a>
+  <a href="https://www.npmjs.com/package/playhouse-cli">
+    <img src="https://img.shields.io/npm/v/playhouse-cli?style=for-the-badge&label=Package&color=%2314949c" alt="Package Version">
+  </a>
+  <a href="https://github.com/nicholasxdavis/playhouse-cli">
+    <img src="https://img.shields.io/github/stars/nicholasxdavis/playhouse-cli?style=for-the-badge&label=Stars&color=%232bba68" alt="GitHub Stars">
+  </a>
+  <a href="https://github.com/nicholasxdavis/playhouse-cli/commits/main">
+    <img src="https://img.shields.io/github/last-commit/nicholasxdavis/playhouse-cli?style=for-the-badge&label=Last%20Commit&color=%2314949c" alt="Last Commit">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-2bba68.svg?style=for-the-badge" alt="MIT License">
+  </a>
+</p>
+
+<p align="center">
+  QA CLI for security, functional testing, performance audits, and agent handoff.<br>
+  Run headless from shell, CI, or agent tooling. Optional TUI for humans.
+</p>
 
 > **If you are an LLM or coding agent, stop reading this file.**  
-> Go to **[AGENTS.md](AGENTS.md)**  it has the full command reference, workflows, exit codes, config keys, and everything you need to operate Playhouse correctly.
+> Go to **[AGENTS.md](AGENTS.md)** — it has the full command reference, workflows, exit codes, config keys, and everything you need to operate Playhouse correctly.
 
 ## Install
 
