@@ -1,13 +1,17 @@
 mod agent_cmd;
 mod args;
 mod audit;
+mod auth_cmd;
 mod config_cmd;
 mod context;
 mod doctor;
 mod handlers;
 mod install_cmd;
 mod output;
+mod status_cmd;
 mod test_cmd;
+mod uninstall_cmd;
+mod update_cmd;
 mod upgrade_cmd;
 mod workspace_cmd;
 
@@ -36,13 +40,15 @@ pub async fn run(cli: Cli) -> i32 {
     match cli.command {
         None => tui::run(&workspace).await,
 
-        Some(Commands::Doctor) => doctor::run(&ctx).await,
+        Some(Commands::Doctor { resolve }) => doctor::run(&ctx, resolve).await,
 
         Some(Commands::Install { minimal, full }) => {
             install_cmd::run(&ctx, minimal, full).await
         }
 
-        Some(Commands::Init { stay_on_track }) => workspace_cmd::run_init(&ctx, stay_on_track).await,
+        Some(Commands::Init { stay_on_track, no_skill }) => {
+            workspace_cmd::run_init(&ctx, stay_on_track, no_skill).await
+        }
 
         Some(Commands::Agent { action }) => agent_cmd::run(&ctx, action).await,
 
@@ -85,6 +91,18 @@ pub async fn run(cli: Cli) -> i32 {
         Some(Commands::Score { url, last }) => audit::run_score(&ctx, url, last).await,
 
         Some(Commands::Upgrade) => upgrade_cmd::run(&ctx),
+
+        Some(Commands::Update) => update_cmd::run(&ctx),
+
+        Some(Commands::Uninstall {
+            global,
+            workspace_tools,
+            yes,
+        }) => uninstall_cmd::run(&ctx, global, workspace_tools, yes).await,
+
+        Some(Commands::Status) => status_cmd::run(&ctx),
+
+        Some(Commands::Auth { action }) => auth_cmd::run(&ctx, action),
     }
 }
 

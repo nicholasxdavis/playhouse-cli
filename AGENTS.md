@@ -69,6 +69,16 @@ playhouse doctor --json
 
 The agent manifest (`playhouse agent --json`) includes a `shell` block with platform notes and examples.
 
+### Windows file locks during install
+
+`playhouse install` retries npm/pnpm/yarn/bun installs up to 3 times on `EPERM`/`EBUSY` errors. If `node_modules` is already usable, install continues with a warning.
+
+When install still fails, JSON output includes `issues[].errorKind: "file_lock"` and remediation text. Typical fixes:
+
+- Close the IDE or terminal holding locks on `node_modules`
+- Pause real-time antivirus scanning on the project folder
+- Retry: `playhouse install --json`
+
 ---
 
 ## Bootstrap (new workspace)
@@ -91,6 +101,9 @@ If doctor reports missing tools: `playhouse install` then re-run doctor.
 |---------|---------|
 | `playhouse agent --json` | Full manifest: commands, settings, readOrder, nextActions, handoff checklist |
 | `playhouse agent status --json` | Quick health, last score, recommended next actions |
+| `playhouse agent rules --json` | Read order and workflow only (token-efficient) |
+| `playhouse agent paths --json` | Key file paths only (token-efficient) |
+| `playhouse agent next-action --json` | Single recommended next command |
 | `playhouse agent plan --json` | Phased workflow (start → during → handoff) |
 | `playhouse agent handoff [--url URL] --json` | Run full verify + write `.playhouse/AGENT.json` |
 
@@ -108,7 +121,11 @@ Global flag: **`--json`** on any subcommand for machine-readable output.
 |---------|-------------|
 | `playhouse init [--stay-on-track] [--json]` | Create `.playhouse/`, install tools, write BRIEF, install agent skill |
 | `playhouse install [--json]` | Install bundled Trivy, Arkenar, Playwright |
-| `playhouse doctor [--json]` | Tool health check |
+| `playhouse update [--json]` | Apply latest Playhouse release (npm/cargo when detected) |
+| `playhouse uninstall [--global] [--workspace-tools] [--yes] [--json]` | Remove bundled tools |
+| `playhouse doctor [--resolve] [--json]` | Tool health check; `--resolve` rebuilds native Node bindings |
+| `playhouse status [--json]` | Verify progress when a verify run is active |
+| `playhouse auth login [--token TOKEN] [--json]` | Save `audit_headers` for authenticated scans |
 | `playhouse export [--json]` | Write or refresh `.playhouse/BRIEF.md` |
 
 ### QA engines (run individually)
@@ -116,7 +133,8 @@ Global flag: **`--json`** on any subcommand for machine-readable output.
 | Command | Description |
 |---------|-------------|
 | `playhouse trivy [--json]` | Static security + secret scan |
-| `playhouse playwright [pattern] [--json]` | Run Playwright tests; optional file or grep pattern |
+| `playhouse functional [pattern] [--json]` | Run detected functional runner (cargo, go, pytest, npm test, …) |
+| `playhouse playwright [pattern] [--json]` | Browser E2E tests only (Playwright) |
 | `playhouse arkenar [url] [--json]` | DAST web scan; URL auto-detected if omitted |
 | `playhouse lighthouse [url] [--json]` | Performance / a11y / SEO audit; URL auto-detected if omitted |
 
@@ -125,6 +143,7 @@ Global flag: **`--json`** on any subcommand for machine-readable output.
 | Command | Description |
 |---------|-------------|
 | `playhouse verify [--url URL] [--json]` | All engines + Playhouse Stars (0–100) |
+| `playhouse verify --start-server "CMD" [--server-port N] [--server-timeout SEC] [--json]` | Start dev server, run audits, stop server; JSON includes `devServer` |
 | `playhouse score [--url URL] [--json]` | Star rating audit (same engines as verify) |
 | `playhouse score --last [--json]` | Read last score from `.playhouse/reports/score.json` |
 
@@ -224,11 +243,40 @@ playhouse config set default_url http://localhost:3000
 
 If no URL is available and `skip_lighthouse_without_server` is true, Lighthouse may be skipped (stars rebalance).
 
+### Dev server for verify
+
+When no URL is configured, start a server inline:
+
+```bash
+playhouse verify --start-server "npm run dev" --json
+playhouse verify --start-server "pnpm dev" --server-port 5173 --server-timeout 90 --json
+```
+
+Playhouse polls `http://localhost:{port}` until the server responds, runs the audit, then stops the process. Verify JSON includes a `devServer` block (`started`, `command`, `port`, `url`, `stopped`).
+
+Port resolution: `--server-port` → port from `default_url` → stack hints → `3000`.
+
+### Authenticated browser audits
+
+Set request headers for Lighthouse and Arkenar (DAST). Values support `${ENV_VAR}` expansion at scan time:
+
+```bash
+export AUTH_TOKEN=your-token
+playhouse config set audit_headers '{"Authorization":"Bearer ${AUTH_TOKEN}"}'
+playhouse verify --url http://localhost:3000 --json
+```
+
+Headers are stored in `.playhouse/config.json` as `audit_headers` (JSON object). Do not commit tokens; use environment variables in values.
+
 ---
 
 ## Configuration reference
 
-Run `playhouse config schema --json` for the live list.
+Run `playhouse config schema --json` for the live list, **precedence rules**, and platform config paths.
+
+**Precedence:** workspace config overrides global for the same key; CLI flags override both at runtime. Verify URL: `--url` → `default_url` → `default_lighthouse_url` → auto-detected server.
+
+**Global config file:** run `playhouse config --json` and read `paths.settingsFile` (typically `%APPDATA%\playhouse\playhouse\config\settings.json` on Windows, `~/.config/playhouse/settings.json` on macOS/Linux).
 
 ### Global settings (`~/.config/playhouse/settings.json` or platform equivalent)
 
@@ -257,6 +305,7 @@ Run `playhouse config schema --json` for the live list.
 | Key | Type | Description |
 |-----|------|-------------|
 | `default_url` | string\|null | Workspace verify URL |
+| `audit_headers` | object\|null | HTTP headers for Lighthouse/Arkenar; `${VAR}` env expansion |
 | `agent_notes` | string\|null | Notes for agents in this repo |
 | `project_name` | string\|null | Display name |
 

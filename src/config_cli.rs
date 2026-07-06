@@ -1,6 +1,6 @@
 use serde_json::{json, Value};
 
-use crate::config::{load_settings, save_settings, PlayhouseSettings};
+use crate::config::{self, load_settings, save_settings, PlayhouseSettings};
 use crate::workspace::{load_workspace_config, save_workspace_config, WorkspaceConfig};
 
 #[derive(Debug, Clone)]
@@ -44,13 +44,60 @@ pub fn schema() -> Vec<ConfigKey> {
 
 pub fn schema_json() -> Value {
     json!({
-        "keys": schema().iter().map(|k| json!({
-            "key": k.key,
-            "scope": k.scope,
-            "type": k.kind,
-            "description": k.description,
-        })).collect::<Vec<_>>(),
+        "precedence": config_precedence(),
+        "globalConfigPaths": global_config_paths(),
+        "keys": schema().iter().map(|k| {
+            let mut entry = json!({
+                "key": k.key,
+                "scope": k.scope,
+                "type": k.kind,
+                "description": k.description,
+            });
+            if let Some(rules) = validation_rules(k.key) {
+                entry["validation"] = rules;
+            }
+            entry
+        }).collect::<Vec<_>>(),
     })
+}
+
+fn config_precedence() -> Value {
+    json!([
+        { "setting": "verify URL", "order": ["CLI --url", "workspace.default_url", "global.default_lighthouse_url", "auto-detected local server"] },
+        { "setting": "workspace vs global", "order": ["workspace config overrides global for the same key", "CLI flags override both at runtime"] },
+        { "setting": "playhouse skill", "order": ["workspace.playhouse_skill OR global.playhouse_skill_enabled"] },
+        { "setting": "stay-on-track", "order": ["workspace.stay_on_track OR global.stay_on_track_enabled"] },
+    ])
+}
+
+fn global_config_paths() -> Value {
+    json!({
+        "windows": config::settings_path().display().to_string(),
+        "macos": "~/.config/playhouse/settings.json",
+        "linux": "~/.config/playhouse/settings.json",
+        "resolved": config::settings_path(),
+        "playhouseHome": config::playhouse_home(),
+    })
+}
+
+fn validation_rules(key: &str) -> Option<Value> {
+    match key {
+        "package_manager" => Some(json!({ "enum": ["auto", "npm", "pnpm", "yarn", "bun"] })),
+        "star_pass_threshold" => Some(json!({ "min": 0, "max": 100 })),
+        "lighthouse_threshold" => Some(json!({ "min": 0.0, "max": 1.0 })),
+        "default_lighthouse_url" | "default_url" => {
+            Some(json!({ "format": "http-or-https-url" }))
+        }
+        "functional_runner" => Some(json!({
+            "enum": ["playwright", "npm-test", "cargo-test", "go-test", "pytest", "mvn-test", "gradle-test", "none"]
+        })),
+        "scan_root" | "test_root" => Some(json!({ "mustExist": true, "mustBeDirectory": true })),
+        "audit_headers" => Some(json!({
+            "format": "json-object",
+            "envExpansion": "${VAR} placeholders read from process environment at scan time"
+        })),
+        _ => None,
+    }
 }
 
 pub fn get(workspace: &str, key: &str) -> Result<Value, String> {

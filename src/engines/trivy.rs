@@ -2,6 +2,7 @@ use crate::cmd::r#async as async_cmd;
 use crate::config::load_settings;
 use crate::engines::metrics_util::{error_metrics, finalize_metrics};
 use crate::install;
+use crate::pkgmgr::{self, PackageManager};
 use crate::report;
 use crate::tools;
 use serde_json::{json, Value};
@@ -49,33 +50,40 @@ pub async fn execute(workspace: &str, options: &TrivyOptions) -> (i32, Value) {
     }
 
     let skip_dirs = crate::workspace::trivy_skip_dirs(workspace);
-    let main = run_trivy_pass(&trivy, &scan, ".", &severity, &cache_dir, &skip_dirs).await;
+    let scan_path = Path::new(&scan);
+    let lockfile_missing = scan_path.join("package.json").is_file()
+        && !pkgmgr::has_node_lockfile(scan_path);
 
-    let well_known = Path::new(&scan).join(".well-known");
-    let merged = if well_known.is_dir() {
-        let dot = run_trivy_pass(
-            &trivy,
-            &scan,
-            ".well-known",
-            &severity,
-            &cache_dir,
-            &skip_dirs,
-        )
-        .await;
-        match (main, dot) {
-            (Ok((main_data, tool_exit)), Ok((dot_data, _))) => {
-                Ok((merge_trivy_results(&main_data, &dot_data), tool_exit))
-            }
-            (Ok(pair), Err(_)) => Ok(pair),
-            (Err(_e), Ok((dot_data, tool_exit))) => Ok((dot_data, tool_exit)),
-            (Err(e), Err(_)) => Err(e),
-        }
-    } else {
-        main
-    };
+    let merged = run_trivy_pass(&trivy, &scan, ".", &severity, &cache_dir, &skip_dirs).await;
 
     match merged {
-        Ok((trivy_data, tool_exit)) => {
+        Ok((mut trivy_data, tool_exit)) => {
+            let mut scan_path_used = json!("trivy-fs");
+            let mut pm_audit: Option<Value> = None;
+            let mut dependency_warning: Option<String> = None;
+
+            if lockfile_missing {
+                dependency_warning = Some(
+                    "No Node lockfile found — dependency scan may be incomplete; running package manager audit fallback"
+                        .into(),
+                );
+                let pm = PackageManager::resolve(workspace, &settings.package_manager);
+                match pm.audit_high_critical(scan_path).await {
+                    Ok((pm_count, audit_data)) => {
+                        scan_path_used = json!("pm-audit-fallback");
+                        pm_audit = Some(audit_data);
+                        if pm_count > 0 {
+                            merge_pm_audit_warning(&mut trivy_data, pm_count);
+                        }
+                    }
+                    Err(e) => {
+                        dependency_warning = Some(format!(
+                            "No lockfile and PM audit fallback failed: {e}"
+                        ));
+                    }
+                }
+            }
+
             if trivy_data.is_null() {
                 let metrics = error_metrics("trivy", 5, "trivy JSON was null", json!({}));
                 let _ = report::save_engine_report(workspace, "trivy", &metrics);
@@ -83,8 +91,11 @@ pub async fn execute(workspace: &str, options: &TrivyOptions) -> (i32, Value) {
             }
 
             let (vuln_count, secret_count) = count_findings(&trivy_data);
-            let findings_ok = vuln_count == 0 && secret_count == 0;
-            let code = if !findings_ok {
+            let incomplete = lockfile_missing && pm_audit.is_none();
+            let findings_ok = vuln_count == 0 && secret_count == 0 && !incomplete;
+            let code = if incomplete {
+                4
+            } else if !findings_ok {
                 4
             } else if tool_exit != 0 {
                 5
@@ -92,6 +103,24 @@ pub async fn execute(workspace: &str, options: &TrivyOptions) -> (i32, Value) {
                 0
             };
             let passed = code == 0;
+            let mut body = json!({
+                "engine": "trivy",
+                "passed": passed,
+                "scanComplete": !incomplete,
+                "scanPath": scan_path_used,
+                "lockfileMissing": lockfile_missing,
+                "summary": {
+                    "vulnerabilities": vuln_count,
+                    "secrets": secret_count,
+                },
+                "raw": trivy_data,
+            });
+            if let Some(w) = dependency_warning {
+                body["dependencyWarning"] = json!(w);
+            }
+            if let Some(a) = pm_audit {
+                body["pmAudit"] = a;
+            }
             let metrics = finalize_metrics(
                 code,
                 if tool_exit != code {
@@ -99,16 +128,7 @@ pub async fn execute(workspace: &str, options: &TrivyOptions) -> (i32, Value) {
                 } else {
                     None
                 },
-                json!({
-                    "engine": "trivy",
-                    "passed": passed,
-                    "scanComplete": true,
-                    "summary": {
-                        "vulnerabilities": vuln_count,
-                        "secrets": secret_count,
-                    },
-                    "raw": trivy_data,
-                }),
+                body,
             );
             let _ = report::save_engine_report(workspace, "trivy", &metrics);
             (code, metrics)
@@ -161,6 +181,7 @@ async fn run_trivy_pass(
         "fs",
         "--scanners",
         "vuln,secret",
+        "--hidden",
         "--severity",
         severity,
         "--format",
@@ -190,54 +211,6 @@ async fn run_trivy_pass(
     Ok((data, tool_exit))
 }
 
-fn merge_trivy_results(main: &Value, extra: &Value) -> Value {
-    let mut merged = main.clone();
-    let Some(main_results) = merged.get_mut("Results").and_then(|r| r.as_array_mut()) else {
-        return extra.clone();
-    };
-    let Some(extra_results) = extra.get("Results").and_then(|r| r.as_array()) else {
-        return merged;
-    };
-    for result in extra_results {
-        if let Some(target) = result.get("Target").and_then(|t| t.as_str()) {
-            if let Some(existing) = main_results
-                .iter_mut()
-                .find(|r| r.get("Target").and_then(|t| t.as_str()) == Some(target))
-            {
-                merge_result_entry(existing, result);
-            } else {
-                main_results.push(result.clone());
-            }
-        } else {
-            main_results.push(result.clone());
-        }
-    }
-    merged
-}
-
-fn merge_result_entry(dst: &mut Value, src: &Value) {
-    let Some(dst_map) = dst.as_object_mut() else {
-        return;
-    };
-    let Some(src_map) = src.as_object() else {
-        return;
-    };
-    for key in ["Vulnerabilities", "Secrets"] {
-        if let Some(src_items) = src_map.get(key).and_then(|v| v.as_array()) {
-            let entry = dst_map
-                .entry(key.to_string())
-                .or_insert_with(|| json!([]));
-            if let Some(dst_items) = entry.as_array_mut() {
-                for item in src_items {
-                    if !dst_items.contains(item) {
-                        dst_items.push(item.clone());
-                    }
-                }
-            }
-        }
-    }
-}
-
 pub fn count_findings(data: &Value) -> (u64, u64) {
     let mut vulns = 0u64;
     let mut secrets = 0u64;
@@ -256,26 +229,11 @@ pub fn count_findings(data: &Value) -> (u64, u64) {
     (vulns, secrets)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn merge_trivy_results_combines_secrets() {
-        let main = json!({
-            "Results": [{
-                "Target": ".",
-                "Secrets": [{ "RuleID": "a" }]
-            }]
-        });
-        let extra = json!({
-            "Results": [{
-                "Target": ".well-known",
-                "Secrets": [{ "RuleID": "b" }]
-            }]
-        });
-        let merged = merge_trivy_results(&main, &extra);
-        let results = merged["Results"].as_array().unwrap();
-        assert_eq!(results.len(), 2);
+fn merge_pm_audit_warning(data: &mut Value, pm_count: u64) {
+    if let Some(obj) = data.as_object_mut() {
+        obj.insert(
+            "PmAuditFindings".into(),
+            json!({ "count": pm_count, "source": "package-manager-audit" }),
+        );
     }
 }

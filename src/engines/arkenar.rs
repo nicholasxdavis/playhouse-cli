@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::cmd::r#async as async_cmd;
 use crate::config::load_settings;
-use crate::engines::metrics_util::{error_metrics, finalize_metrics};
+use crate::engines::metrics_util::{attach_failure_output, error_metrics, finalize_metrics};
 use crate::install;
 use crate::report;
 use crate::tools;
@@ -53,7 +53,7 @@ pub async fn execute(url: &str, workspace: &str) -> (i32, serde_json::Value) {
         settings.arkenar_max_urls.to_string(),
     ];
 
-    if let Some(headers) = crate::workspace::audit_headers(workspace) {
+    if let Some(headers) = crate::workspace::resolved_audit_headers(workspace) {
         args.extend(crate::workspace::arkenar_header_args(&headers));
     }
 
@@ -76,11 +76,13 @@ pub async fn execute(url: &str, workspace: &str) -> (i32, serde_json::Value) {
         Ok(out) => {
             let tool_exit = out.status.code().unwrap_or(1);
             let stdout = String::from_utf8_lossy(&out.stdout);
-            let findings = parse_report(&output_path).or_else(|| parse_stdout_json(&stdout));
+            let stderr = String::from_utf8_lossy(&out.stderr);
+            let (findings, parse_detail) = parse_report_detailed(&output_path, &stdout);
 
             if findings.is_none() {
                 let code = if tool_exit != 0 { tool_exit } else { 5 };
-                let metrics = finalize_metrics(
+                let failure_mode = arkenar_failure_mode(&output_path, tool_exit, &parse_detail);
+                let mut metrics = finalize_metrics(
                     code,
                     if tool_exit != code {
                         Some(tool_exit)
@@ -92,15 +94,16 @@ pub async fn execute(url: &str, workspace: &str) -> (i32, serde_json::Value) {
                         "passed": false,
                         "scanComplete": false,
                         "reportParseError": true,
+                        "failureMode": failure_mode,
                         "target": url,
                         "reportPath": output_path,
-                        "error": if output_path.is_file() {
-                            "failed to parse arkenar report"
-                        } else {
-                            "arkenar report file missing"
-                        },
+                        "reportFileExists": output_path.is_file(),
+                        "reportFileBytes": std::fs::metadata(&output_path).map(|m| m.len()).unwrap_or(0),
+                        "parseDetail": parse_detail,
+                        "error": arkenar_error_message(failure_mode, &output_path),
                     }),
                 );
+                metrics = attach_failure_output(metrics, code, &stdout, &stderr);
                 let _ = report::save_engine_report(workspace, "arkenar", &metrics);
                 return (code, metrics);
             }
@@ -108,7 +111,7 @@ pub async fn execute(url: &str, workspace: &str) -> (i32, serde_json::Value) {
             let data = findings.unwrap();
             if !report_file_valid(&output_path) && report_is_empty(&data) {
                 let code = if tool_exit != 0 { tool_exit } else { 5 };
-                let metrics = finalize_metrics(
+                let mut metrics = finalize_metrics(
                     code,
                     Some(tool_exit),
                     json!({
@@ -116,11 +119,13 @@ pub async fn execute(url: &str, workspace: &str) -> (i32, serde_json::Value) {
                         "passed": false,
                         "scanComplete": false,
                         "reportParseError": true,
+                        "failureMode": "empty_report",
                         "target": url,
                         "reportPath": output_path,
                         "error": "arkenar produced no usable report",
                     }),
                 );
+                metrics = attach_failure_output(metrics, code, &stdout, &stderr);
                 let _ = report::save_engine_report(workspace, "arkenar", &metrics);
                 return (code, metrics);
             }
@@ -128,18 +133,20 @@ pub async fn execute(url: &str, workspace: &str) -> (i32, serde_json::Value) {
             let (high, medium, low, total) = summarize_findings(&data);
             if tool_exit != 0 && total == 0 {
                 let code = if tool_exit != 0 { tool_exit } else { 5 };
-                let metrics = finalize_metrics(
+                let mut metrics = finalize_metrics(
                     code,
                     Some(tool_exit),
                     json!({
                         "engine": "arkenar",
                         "passed": false,
                         "scanComplete": false,
+                        "failureMode": "target_error",
                         "target": url,
                         "reportPath": output_path,
                         "error": "arkenar exited with error and no findings",
                     }),
                 );
+                metrics = attach_failure_output(metrics, code, &stdout, &stderr);
                 let _ = report::save_engine_report(workspace, "arkenar", &metrics);
                 return (code, metrics);
             }
@@ -179,11 +186,16 @@ pub async fn execute(url: &str, workspace: &str) -> (i32, serde_json::Value) {
             (code, metrics)
         }
         Err(e) => {
-            let metrics = error_metrics(
-                "arkenar",
+            let metrics = attach_failure_output(
+                error_metrics(
+                    "arkenar",
+                    5,
+                    &format!("Failed to run arkenar: {e}"),
+                    json!({ "failureMode": "spawn_error" }),
+                ),
                 5,
-                &format!("Failed to run arkenar: {e}"),
-                json!({}),
+                "",
+                &e.to_string(),
             );
             let _ = report::save_engine_report(workspace, "arkenar", &metrics);
             (5, metrics)
@@ -239,6 +251,57 @@ fn report_is_empty(data: &Value) -> bool {
 fn parse_report(path: &Path) -> Option<Value> {
     let content = std::fs::read_to_string(path).ok()?;
     serde_json::from_str(&content).ok()
+}
+
+fn parse_report_detailed(path: &Path, stdout: &str) -> (Option<Value>, String) {
+    if let Some(v) = parse_report(path) {
+        return (Some(v), "parsed report file".into());
+    }
+    if !path.is_file() {
+        if let Some(v) = parse_stdout_json(stdout) {
+            return (Some(v), "parsed stdout (report file missing)".into());
+        }
+        return (None, "report file missing".into());
+    }
+    if let Ok(content) = std::fs::read_to_string(path) {
+        if content.trim().is_empty() {
+            return (None, "report file empty".into());
+        }
+        return (
+            None,
+            format!(
+                "report parse error: {}",
+                content.chars().take(80).collect::<String>()
+            ),
+        );
+    }
+    if let Some(v) = parse_stdout_json(stdout) {
+        return (Some(v), "parsed stdout fallback".into());
+    }
+    (None, "failed to parse report file or stdout".into())
+}
+
+fn arkenar_failure_mode(path: &Path, tool_exit: i32, detail: &str) -> &'static str {
+    if !path.is_file() {
+        if tool_exit != 0 {
+            return "target_error";
+        }
+        return "missing_report";
+    }
+    if detail.contains("empty") {
+        return "empty_report";
+    }
+    "parse_error"
+}
+
+fn arkenar_error_message(mode: &str, path: &Path) -> String {
+    match mode {
+        "missing_report" => "arkenar report file missing".into(),
+        "empty_report" => "arkenar report file empty".into(),
+        "target_error" => "arkenar target unreachable or exited with error".into(),
+        "parse_error" => format!("failed to parse arkenar report at {}", path.display()),
+        _ => "arkenar scan failed".into(),
+    }
 }
 
 fn parse_stdout_json(stdout: &str) -> Option<Value> {
@@ -299,5 +362,26 @@ fn walk_findings(value: &Value, on_severity: &mut dyn FnMut(&str)) {
             }
         }
         _ => {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn parse_report_detailed_missing_file() {
+        let (v, detail) = parse_report_detailed(&PathBuf::from("/nonexistent/arkenar.json"), "");
+        assert!(v.is_none());
+        assert!(detail.contains("missing"));
+    }
+
+    #[test]
+    fn failure_mode_missing_report() {
+        assert_eq!(
+            arkenar_failure_mode(Path::new("/missing.json"), 0, "report file missing"),
+            "missing_report"
+        );
     }
 }

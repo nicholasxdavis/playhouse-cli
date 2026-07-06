@@ -8,9 +8,24 @@ pub mod npm_test;
 pub mod pytest;
 
 use crate::config::load_settings;
+use crate::engines::metrics_util::finalize_metrics;
 use crate::install;
 use crate::project::{FunctionalRunner, ProjectProfile};
 use crate::report;
+
+/// Environment variables injected for headless functional test runs.
+pub const HEADLESS_ENV: &[(&str, &str)] = &[
+    ("CI", "true"),
+    ("WATCH", "false"),
+    ("FORCE_COLOR", "0"),
+];
+
+/// Apply CI-style env vars so test runners do not enter interactive watch mode.
+pub fn apply_headless_env(cmd: &mut tokio::process::Command) {
+    for (key, value) in HEADLESS_ENV {
+        cmd.env(key, *value);
+    }
+}
 
 pub async fn execute(
     workspace: &str,
@@ -40,14 +55,18 @@ pub async fn execute(
         FunctionalRunner::MvnTest => mvn::execute(&test_root).await,
         FunctionalRunner::GradleTest => gradle::execute(&test_root).await,
         FunctionalRunner::None => {
-            let metrics = serde_json::json!({
-                "engine": "functional",
-                "runner": "none",
-                "skipped": true,
-                "passed": false,
-                "noTests": true,
-                "stats": { "passed": 0, "failed": 0, "skipped": 0, "total": 0 },
-            });
+            let metrics = finalize_metrics(
+                1,
+                None,
+                serde_json::json!({
+                    "engine": "functional",
+                    "runner": "none",
+                    "skipped": true,
+                    "passed": false,
+                    "noTests": true,
+                    "stats": { "passed": 0, "failed": 0, "skipped": 0, "total": 0 },
+                }),
+            );
             let _ = report::save_engine_report(workspace, "functional", &metrics);
             return (1, metrics);
         }
@@ -56,6 +75,13 @@ pub async fn execute(
     let mut metrics = metrics;
     if metrics.get("engine").is_none() {
         metrics["engine"] = Value::String("functional".into());
+    }
+    if metrics.get("exitCode").is_none() {
+        metrics = finalize_metrics(code, None, metrics);
+    }
+    metrics["headlessEnv"] = serde_json::json!(true);
+    if let Some(p) = pattern {
+        metrics["testPattern"] = serde_json::json!(p);
     }
     let roots = crate::workspace::resolve_roots(workspace);
     metrics["roots"] = serde_json::json!({
@@ -157,6 +183,17 @@ fn normalize_playwright(m: &Value, runner: FunctionalRunner) -> Value {
         out["failureOutput"] = fo.clone();
     }
     out
+}
+
+#[cfg(test)]
+mod headless_tests {
+    use super::*;
+
+    #[test]
+    fn headless_env_includes_ci() {
+        assert!(HEADLESS_ENV.iter().any(|(k, v)| *k == "CI" && *v == "true"));
+        assert!(HEADLESS_ENV.iter().any(|(k, _)| *k == "WATCH"));
+    }
 }
 
 fn fix_hint(runner: &str) -> String {

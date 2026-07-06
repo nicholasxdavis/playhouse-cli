@@ -4,7 +4,7 @@ use serde_json::{json, Value};
 
 use crate::audit::{self, AuditReport};
 use crate::baseplates;
-use crate::config::{load_settings, PlayhouseSettings};
+use crate::config::{load_settings, playhouse_home, settings_path, PlayhouseSettings};
 use crate::detect;
 use crate::project::{self, ProjectProfile};
 use crate::score::PlayhouseScore;
@@ -36,6 +36,8 @@ pub fn manifest(workspace: &str) -> Value {
         "tools": tools_block(workspace, &checks, &url, &profile),
         "urls": urls_block(workspace, &settings, &ws_config, &url),
         "commands": commands_reference(),
+        "agentSubcommands": agent_subcommands_reference(),
+        "functionalTests": functional_test_guide(),
         "recipes": recipes(workspace, &url),
         "exitCodes": exit_codes(),
         "settings": settings,
@@ -49,6 +51,48 @@ pub fn manifest(workspace: &str) -> Value {
         "workflow": agent_workflow(workspace, &settings, &ws_config, &profile),
         "shell": crate::shell::support_block(workspace),
         "configKeys": "Run `playhouse config schema --json` for settable keys",
+    })
+}
+
+pub fn rules_json(workspace: &str) -> Value {
+    let settings = load_settings();
+    let ws = workspace::load_workspace_config(workspace);
+    let profile = project::detect(workspace);
+    json!({
+        "command": "agent rules",
+        "readOrder": read_order(workspace, &settings, &ws),
+        "handoffChecklist": handoff_checklist(&settings, &ws, &profile),
+        "workflow": agent_workflow(workspace, &settings, &ws, &profile),
+    })
+}
+
+pub fn paths_json(workspace: &str) -> Value {
+    let settings = load_settings();
+    let ws = workspace::load_workspace_config(workspace);
+    let profile = project::detect(workspace);
+    let url = workspace::resolve_verify_url(workspace, &settings);
+    let wb = workspace_block(workspace, &ws, &url, &profile);
+    json!({
+        "command": "agent paths",
+        "paths": wb.get("paths").cloned().unwrap_or_default(),
+        "global": {
+            "playhouseHome": playhouse_home(),
+            "settingsFile": settings_path(),
+        },
+        "verifyProgress": crate::verify_progress::progress_path(workspace),
+    })
+}
+
+pub fn next_action_json(workspace: &str) -> Value {
+    let settings = load_settings();
+    let checks = detect::run_doctor(workspace);
+    let profile = project::detect(workspace);
+    let last_score = load_last_score(workspace);
+    let actions = next_actions(workspace, &settings, &checks, &last_score, &profile);
+    json!({
+        "command": "agent next-action",
+        "nextAction": actions.first().cloned().unwrap_or(json!(null)),
+        "alternatives": actions,
     })
 }
 
@@ -145,7 +189,7 @@ pub fn build_handoff_json(
     });
 
     if let Some(report) = audit {
-        out["audit"] = audit::audit_json(report);
+        out["audit"] = audit::audit_json(report, None);
         out["playhouseScore"] = json!(report.score);
         out["exitCode"] = json!(report.exit_code);
         out["passed"] = json!(report.exit_code == 0);
@@ -705,6 +749,14 @@ fn recipes(_workspace: &str, url: &Option<String>) -> Value {
             format!("playhouse agent handoff{url_flag} --json"),
             "playhouse export",
         ],
+        "authenticatedAudit": [
+            "export AUTH_TOKEN=<token>",
+            "playhouse config set audit_headers '{\"Authorization\":\"Bearer ${AUTH_TOKEN}\"}'",
+            format!("playhouse verify{url_flag} --json"),
+        ],
+        "verifyWithDevServer": [
+            format!("playhouse verify --start-server \"npm run dev\"{url_flag} --json"),
+        ],
         "config": [
             "playhouse config schema --json",
             "playhouse config get package_manager",
@@ -713,26 +765,47 @@ fn recipes(_workspace: &str, url: &Option<String>) -> Value {
     })
 }
 
+fn agent_subcommands_reference() -> Value {
+    json!([
+        { "cmd": "playhouse agent rules --json", "desc": "Read order, checklist, workflow only (token-efficient)" },
+        { "cmd": "playhouse agent paths --json", "desc": "Key file paths only (token-efficient)" },
+        { "cmd": "playhouse agent next-action --json", "desc": "Single recommended next command (token-efficient)" },
+    ])
+}
+
+fn functional_test_guide() -> Value {
+    json!({
+        "functional": "Use for unit/integration tests via the detected runner (cargo, go, pytest, npm test, …)",
+        "playwright": "Use for browser E2E tests only",
+        "deprecated": "playhouse test run — use playhouse functional instead",
+    })
+}
+
 fn commands_reference() -> Value {
     json!([
         { "cmd": "playhouse [-C DIR] agent [--json]", "desc": "Full agent manifest (-C sets workspace without cd)" },
         { "cmd": "playhouse [-C DIR] agent status [--json]", "desc": "Quick health and next actions" },
         { "cmd": "playhouse agent plan [--json]", "desc": "Phased workflow for this workspace" },
+        { "cmd": "playhouse agent next-action [--json]", "desc": "Single recommended next command (token-efficient)" },
         { "cmd": "playhouse agent handoff [--url URL] [--json]", "desc": "Run verify and write handoff bundle" },
         { "cmd": "playhouse config [--json]", "desc": "Show all settings" },
-        { "cmd": "playhouse config schema [--json]", "desc": "List settable config keys" },
+        { "cmd": "playhouse config schema [--json]", "desc": "List settable config keys and precedence" },
         { "cmd": "playhouse config get <key>", "desc": "Read a setting" },
         { "cmd": "playhouse config set <key> <value>", "desc": "Update a setting" },
         { "cmd": "playhouse init [--stay-on-track] [--json]", "desc": "Set up .playhouse/" },
         { "cmd": "playhouse install [--json]", "desc": "Install bundled tools" },
-        { "cmd": "playhouse doctor [--json]", "desc": "Tool health check" },
+        { "cmd": "playhouse doctor [--resolve] [--json]", "desc": "Tool health check; --resolve rebuilds native Node bindings" },
+        { "cmd": "playhouse status [--json]", "desc": "Verify progress when verify is running" },
+        { "cmd": "playhouse update [--json]", "desc": "Apply latest Playhouse release" },
+        { "cmd": "playhouse uninstall [--global] [--workspace-tools] [--yes] [--json]", "desc": "Remove bundled tools" },
+        { "cmd": "playhouse auth login [--token TOKEN] [--json]", "desc": "Save audit_headers for authenticated scans" },
         { "cmd": "playhouse verify [--url URL] [--test PATTERN] [--start-server CMD] [--server-port N] [--json]", "desc": "Full QA + Playhouse Stars" },
         { "cmd": "playhouse score [--url URL] [--last] [--json]", "desc": "Star rating audit" },
-        { "cmd": "playhouse functional [--json]", "desc": "Run detected functional test runner" },
+        { "cmd": "playhouse functional [--json]", "desc": "Run detected functional test runner (preferred)" },
         { "cmd": "playhouse test list [--json]", "desc": "List scaffold baseplates for this stack" },
         { "cmd": "playhouse test init [--plate ID] [--force] [--json]", "desc": "Scaffold starter tests when none exist" },
         { "cmd": "playhouse test add --plate ID [--force] [--json]", "desc": "Add another baseplate file" },
-        { "cmd": "playhouse test run [--json]", "desc": "Run functional tests (same as functional)" },
+        { "cmd": "playhouse test run [--json]", "desc": "Deprecated — use playhouse functional" },
         { "cmd": "playhouse playwright [pattern] [--json]", "desc": "Playwright tests (web E2E)" },
         { "cmd": "playhouse trivy [--json]", "desc": "Security and secret scan" },
         { "cmd": "playhouse arkenar [url] [--json]", "desc": "DAST web scan" },

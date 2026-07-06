@@ -1,5 +1,6 @@
 use crate::cmd::r#async as async_cmd;
-use crate::engines::functional::{build_metrics, resolve_exit_code};
+use crate::engines::functional::{apply_headless_env, build_metrics, resolve_exit_code};
+use crate::engines::metrics_util::attach_failure_output;
 
 pub async fn execute(workspace: &str) -> (i32, serde_json::Value) {
     let check = async_cmd("mvn").arg("--version").output().await;
@@ -8,24 +9,28 @@ pub async fn execute(workspace: &str) -> (i32, serde_json::Value) {
         return (5, metrics);
     }
 
-    let out = async_cmd("mvn")
-        .args(["-q", "test"])
-        .current_dir(workspace)
-        .output()
-        .await;
+    let out = {
+        let mut cmd = async_cmd("mvn");
+        cmd.args(["-q", "test"]).current_dir(workspace);
+        apply_headless_env(&mut cmd);
+        cmd.output().await
+    };
 
     match out {
         Ok(o) => {
-            let combined = format!(
-                "{}\n{}",
-                String::from_utf8_lossy(&o.stdout),
-                String::from_utf8_lossy(&o.stderr)
-            );
+            let stdout = String::from_utf8_lossy(&o.stdout);
+            let stderr = String::from_utf8_lossy(&o.stderr);
+            let combined = format!("{stdout}\n{stderr}");
             let (passed, failed, skipped) = parse_maven_summary(&combined);
             let no_tests = passed == 0 && failed == 0 && skipped == 0;
             let exit = o.status.code().unwrap_or(1);
             let code = resolve_exit_code(passed, failed, no_tests, exit, false);
-            let metrics = build_metrics("mvn-test", passed, failed, skipped, no_tests, None);
+            let metrics = attach_failure_output(
+                build_metrics("mvn-test", passed, failed, skipped, no_tests, None),
+                code,
+                &stdout,
+                &stderr,
+            );
             (code, metrics)
         }
         Err(e) => (

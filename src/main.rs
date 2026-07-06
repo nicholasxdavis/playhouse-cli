@@ -1,6 +1,8 @@
+mod auth;
 mod dev_server;
 mod agent;
 mod audit;
+mod engine_status;
 mod baseplates;
 mod cli;
 mod cmd;
@@ -17,7 +19,10 @@ mod score;
 mod tools;
 mod tui;
 mod types;
+mod uninstall;
+mod update;
 mod upgrade;
+mod verify_progress;
 mod workspace;
 
 use clap::Parser;

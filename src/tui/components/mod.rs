@@ -3,6 +3,8 @@ pub mod feed;
 pub mod help_menu;
 pub mod input;
 pub mod mention_menu;
+pub mod score_report;
 pub mod slash_menu;
 pub mod status_bar;
+pub mod tool_call;
 pub mod welcome;

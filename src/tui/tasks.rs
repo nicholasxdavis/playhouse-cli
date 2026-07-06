@@ -347,7 +347,7 @@ async fn run_install(workspace: &str) -> (Vec<ContentBlock>, bool, String) {
 
 async fn run_init(workspace: &str, stay_on_track: bool) -> (Vec<ContentBlock>, bool, String) {
     let settings = load_settings();
-    match workspace::init_workspace(workspace, &settings, true, stay_on_track, true).await {
+    match workspace::init_workspace(workspace, &settings, true, stay_on_track, true, true).await {
         Ok(report) => {
             let summary = "Workspace initialized".into();
             let mut blocks = vec![ContentBlock::text(format!(

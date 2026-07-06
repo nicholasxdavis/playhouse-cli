@@ -93,7 +93,7 @@ async fn run_jest(
     let _ = std::fs::create_dir_all(report_path.parent().unwrap());
 
     let output_file = format!("--outputFile={}", report_path.display());
-    let mut args = vec!["--json", &output_file, "--passWithNoTests"];
+    let mut args = vec!["--json", &output_file, "--passWithNoTests", "--ci", "--watchAll=false"];
     if let Some(p) = pattern {
         args.push(p);
     }

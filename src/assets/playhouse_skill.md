@@ -26,7 +26,7 @@ playhouse agent status --json
 playhouse doctor --json
 ```
 
-New workspace: `playhouse init --json` then `playhouse install`
+New workspace: `playhouse init --json` then `playhouse install`. Skip skill file: `playhouse init --no-skill --json`
 
 ## Commands
 
@@ -38,15 +38,15 @@ New workspace: `playhouse init --json` then `playhouse install`
 | `playhouse playwright [pattern] --json` | Playwright only |
 | `playhouse arkenar --json` | DAST web scan |
 | `playhouse lighthouse --json` | Perf, a11y, SEO |
-| `playhouse verify [--test PATTERN] [--start-server CMD] [--server-port N] --json` | Full audit + stars |
+| `playhouse verify [--test PATTERN] [--start-server CMD] --json` | Full audit + stars |
 | `playhouse agent handoff --json` | Verify + `.playhouse/AGENT.json` |
 
 ## During development
 
 ```bash
 playhouse functional mytest.spec.ts --json
+playhouse verify --test mytest --json
 playhouse trivy --json
-playhouse lighthouse --json
 ```
 
 ## Before handoff
@@ -58,25 +58,15 @@ playhouse agent handoff --json
 
 Pass gate: exit 0, stars >= 75 (default), no Trivy HIGH/CRITICAL or secrets.
 
-## URL for browser audits
+## URL and auth
 
 ```bash
 playhouse config set default_url http://localhost:3000
-```
-
-Or pass `--url` on verify. Or start a server inline:
-
-```bash
 playhouse verify --start-server "npm run dev" --json
-```
-
-### Auth for browser audits
-
-```bash
 playhouse config set audit_headers '{"Authorization":"Bearer TOKEN"}'
 ```
 
-Do not commit tokens. Use workspace config only.
+Do not commit tokens.
 
 ## Key paths
 
@@ -85,14 +75,7 @@ Do not commit tokens. Use workspace config only.
 | `.playhouse/BRIEF.md` | Workspace QA summary |
 | `.playhouse/AGENT.json` | Handoff bundle |
 | `.playhouse/reports/score.json` | Last star rating |
-| `.playhouse/config.json` | `default_url`, `scan_root`, `test_root`, `audit_headers` |
-
-## Monorepo
-
-```bash
-playhouse config set scan_root apps/web
-playhouse config set test_root apps/web
-```
+| `.playhouse/config.json` | Workspace settings |
 
 ## Config
 

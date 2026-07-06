@@ -20,7 +20,9 @@ pub fn run(ctx: &Context<'_>, action: Option<ConfigAction>) -> i32 {
                     "bundledTrivy": tools::bundled_trivy_path(),
                     "playwrightPrefix": tools::playwright_prefix(ctx.workspace),
                     "agentHandoff": workspace::agent_json_path(ctx.workspace),
+                    "verifyProgress": crate::verify_progress::progress_path(ctx.workspace),
                 },
+                "precedence": "playhouse config schema --json (precedence block)",
                 "schema": "playhouse config schema --json",
             }));
             0

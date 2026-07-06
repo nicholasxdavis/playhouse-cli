@@ -71,6 +71,41 @@ pub fn audit_headers(workspace: &str) -> Option<HashMap<String, String>> {
     load_workspace_config(workspace).audit_headers
 }
 
+/// Headers with `${ENV_VAR}` placeholders expanded from the process environment.
+pub fn resolved_audit_headers(workspace: &str) -> Option<HashMap<String, String>> {
+    audit_headers(workspace).map(|headers| {
+        headers
+            .into_iter()
+            .map(|(k, v)| (k, expand_env_in_value(&v)))
+            .collect()
+    })
+}
+
+/// Expand `${VAR}` references using process environment variables.
+pub fn expand_env_in_value(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    let bytes = value.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'$' && i + 1 < bytes.len() && bytes[i + 1] == b'{' {
+            if let Some(end) = value[i + 2..].find('}') {
+                let name = &value[i + 2..i + 2 + end];
+                let replacement = std::env::var(name).unwrap_or_default();
+                out.push_str(&replacement);
+                i += 3 + end;
+                continue;
+            }
+        }
+        if let Some(ch) = value[i..].chars().next() {
+            out.push(ch);
+            i += ch.len_utf8();
+        } else {
+            break;
+        }
+    }
+    out
+}
+
 /// JSON string for Lighthouse `--extra-headers`.
 pub fn lighthouse_extra_headers_json(headers: &HashMap<String, String>) -> String {
     serde_json::to_string(headers).unwrap_or_else(|_| "{}".into())
@@ -304,6 +339,7 @@ pub async fn init_workspace(
     settings: &PlayhouseSettings,
     install_tools: bool,
     enable_stay_on_track: bool,
+    install_skill: bool,
     quiet: bool,
 ) -> Result<InitReport, String> {
     let dir = playhouse_dir(workspace);
@@ -323,7 +359,7 @@ pub async fn init_workspace(
     if enable_stay_on_track {
         ws_config.stay_on_track = true;
     }
-    if settings.playhouse_skill_enabled {
+    if install_skill && settings.playhouse_skill_enabled {
         ws_config.playhouse_skill = true;
     }
     save_workspace_config(workspace, &ws_config).map_err(|e| e.to_string())?;
@@ -334,7 +370,9 @@ pub async fn init_workspace(
         None
     };
 
-    let playhouse_skill = if ws_config.playhouse_skill || settings.playhouse_skill_enabled {
+    let playhouse_skill = if install_skill
+        && (ws_config.playhouse_skill || settings.playhouse_skill_enabled)
+    {
         Some(install_playhouse_skill(workspace, settings)?)
     } else {
         None
@@ -349,7 +387,8 @@ pub async fn init_workspace(
         playhouse_dir: dir.to_string_lossy().into_owned(),
         tools,
         stay_on_track: ws_config.stay_on_track,
-        playhouse_skill: ws_config.playhouse_skill || settings.playhouse_skill_enabled,
+        playhouse_skill: install_skill
+            && (ws_config.playhouse_skill || settings.playhouse_skill_enabled),
         skill_path: skill.map(|p| p.to_string_lossy().into_owned()),
         playhouse_skill_path: playhouse_skill.map(|p| p.to_string_lossy().into_owned()),
         brief_path: brief_path.to_string_lossy().into_owned(),
@@ -671,5 +710,19 @@ mod tests {
         assert_eq!(map.get("Authorization").map(String::as_str), Some("Bearer tok"));
         assert!(parse_audit_headers("[]").is_err());
         assert!(parse_audit_headers("{}").is_err());
+    }
+
+    #[test]
+    fn expand_env_in_value_substitutes_placeholders() {
+        std::env::set_var("PLAYHOUSE_TEST_TOKEN", "secret123");
+        assert_eq!(
+            expand_env_in_value("Bearer ${PLAYHOUSE_TEST_TOKEN}"),
+            "Bearer secret123"
+        );
+        assert_eq!(
+            expand_env_in_value("static ${MISSING_VAR} value"),
+            "static  value"
+        );
+        std::env::remove_var("PLAYHOUSE_TEST_TOKEN");
     }
 }

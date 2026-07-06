@@ -162,72 +162,112 @@ fn make_profile(
 }
 
 fn detect_from_markers(root: &Path, signals: &mut Vec<String>) -> Option<ProjectProfile> {
-    if has_playwright_config(root) {
-        signals.push("playwright.config.*".into());
-        return Some(make_profile(
-            ProjectStack::WebE2e,
-            FunctionalRunner::Playwright,
-            true,
-            std::mem::take(signals),
-            "javascript",
-        ));
-    }
-    if root.join("Cargo.toml").is_file() {
-        signals.push("Cargo.toml".into());
-        return Some(make_profile(
-            ProjectStack::Rust,
-            FunctionalRunner::CargoTest,
-            false,
-            std::mem::take(signals),
-            "rust",
-        ));
-    }
-    if root.join("go.mod").is_file() {
-        signals.push("go.mod".into());
-        return Some(make_profile(
-            ProjectStack::Go,
-            FunctionalRunner::GoTest,
-            false,
-            std::mem::take(signals),
-            "go",
-        ));
-    }
-    if has_python_test_layout(root) {
-        if root.join("pyproject.toml").is_file() {
-            signals.push("pyproject.toml".into());
+    for detect in MARKER_DETECTORS {
+        if let Some(profile) = detect(root, signals) {
+            return Some(profile);
         }
-        if root.join("pytest.ini").is_file() {
-            signals.push("pytest.ini".into());
-        }
-        return Some(make_profile(
-            ProjectStack::Python,
-            FunctionalRunner::Pytest,
-            false,
-            std::mem::take(signals),
-            "python",
-        ));
-    }
-    if root.join("pom.xml").is_file() {
-        signals.push("pom.xml".into());
-        return Some(make_profile(
-            ProjectStack::Java,
-            FunctionalRunner::MvnTest,
-            false,
-            std::mem::take(signals),
-            "java",
-        ));
-    }
-    if has_gradle_layout(root) {
-        signals.push("gradle".into());
-        return Some(make_profile(
-            ProjectStack::Java,
-            FunctionalRunner::GradleTest,
-            false,
-            std::mem::take(signals),
-            "java",
-        ));
     }
     None
+}
+
+type MarkerDetector = fn(&Path, &mut Vec<String>) -> Option<ProjectProfile>;
+
+const MARKER_DETECTORS: &[MarkerDetector] = &[
+    detect_playwright_marker,
+    detect_rust_marker,
+    detect_go_marker,
+    detect_python_marker,
+    detect_maven_marker,
+    detect_gradle_marker,
+];
+
+fn detect_playwright_marker(root: &Path, signals: &mut Vec<String>) -> Option<ProjectProfile> {
+    if !has_playwright_config(root) {
+        return None;
+    }
+    signals.push("playwright.config.*".into());
+    Some(make_profile(
+        ProjectStack::WebE2e,
+        FunctionalRunner::Playwright,
+        true,
+        std::mem::take(signals),
+        "javascript",
+    ))
+}
+
+fn detect_rust_marker(root: &Path, signals: &mut Vec<String>) -> Option<ProjectProfile> {
+    if !root.join("Cargo.toml").is_file() {
+        return None;
+    }
+    signals.push("Cargo.toml".into());
+    Some(make_profile(
+        ProjectStack::Rust,
+        FunctionalRunner::CargoTest,
+        false,
+        std::mem::take(signals),
+        "rust",
+    ))
+}
+
+fn detect_go_marker(root: &Path, signals: &mut Vec<String>) -> Option<ProjectProfile> {
+    if !root.join("go.mod").is_file() {
+        return None;
+    }
+    signals.push("go.mod".into());
+    Some(make_profile(
+        ProjectStack::Go,
+        FunctionalRunner::GoTest,
+        false,
+        std::mem::take(signals),
+        "go",
+    ))
+}
+
+fn detect_python_marker(root: &Path, signals: &mut Vec<String>) -> Option<ProjectProfile> {
+    if !has_python_test_layout(root) {
+        return None;
+    }
+    if root.join("pyproject.toml").is_file() {
+        signals.push("pyproject.toml".into());
+    }
+    if root.join("pytest.ini").is_file() {
+        signals.push("pytest.ini".into());
+    }
+    Some(make_profile(
+        ProjectStack::Python,
+        FunctionalRunner::Pytest,
+        false,
+        std::mem::take(signals),
+        "python",
+    ))
+}
+
+fn detect_maven_marker(root: &Path, signals: &mut Vec<String>) -> Option<ProjectProfile> {
+    if !root.join("pom.xml").is_file() {
+        return None;
+    }
+    signals.push("pom.xml".into());
+    Some(make_profile(
+        ProjectStack::Java,
+        FunctionalRunner::MvnTest,
+        false,
+        std::mem::take(signals),
+        "java",
+    ))
+}
+
+fn detect_gradle_marker(root: &Path, signals: &mut Vec<String>) -> Option<ProjectProfile> {
+    if !has_gradle_layout(root) {
+        return None;
+    }
+    signals.push("gradle".into());
+    Some(make_profile(
+        ProjectStack::Java,
+        FunctionalRunner::GradleTest,
+        false,
+        std::mem::take(signals),
+        "java",
+    ))
 }
 
 fn detect_from_package_json(root: &Path, signals: &mut Vec<String>) -> Option<ProjectProfile> {

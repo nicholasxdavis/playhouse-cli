@@ -84,7 +84,7 @@ pub fn compute(
     let stars = weighted_stars(&categories);
     let grade = grade_for(stars);
     let why = build_why(&categories, stars);
-    let all_engines_ok = engines.iter().all(|e| e.skipped || engine_ok(e));
+    let all_engines_ok = engines.iter().all(engine_passes_gate);
     let meets_threshold = stars >= settings.star_pass_threshold;
     let passed = meets_threshold && all_engines_ok;
 
@@ -112,6 +112,12 @@ pub fn is_implicit_penalty_skip(er: &EngineResult) -> bool {
             .get("implicitPenalty")
             .and_then(|v| v.as_bool())
             .unwrap_or(false)
+}
+
+fn engine_passes_gate(er: &EngineResult) -> bool {
+    let is_skipped = er.skipped;
+    let ran_clean = engine_ok(er);
+    is_skipped || ran_clean
 }
 
 fn engine_ok(er: &EngineResult) -> bool {
@@ -217,13 +223,19 @@ fn build_why(categories: &[CategoryScore], stars: u8) -> Vec<String> {
 }
 
 fn score_trivy(er: &EngineResult) -> CategoryScore {
-    if let Some(err) = er.metrics.get("error").and_then(|e| e.as_str()) {
+    if engine_failed_scan(er) {
+        let summary = er
+            .metrics
+            .get("error")
+            .and_then(|e| e.as_str())
+            .unwrap_or("Trivy scan incomplete")
+            .to_string();
         return CategoryScore {
             id: "security_static".into(),
             label: "Security (Trivy)".into(),
             stars: 0,
             weight: 0.25,
-            summary: err.into(),
+            summary,
             details: vec![],
             skipped: false,
         };
@@ -617,6 +629,26 @@ mod tests {
             serde_json::json!({ "parseError": true }),
         )];
         let score = compute(&engines, None, &settings());
+        assert!(!score.passed);
+    }
+
+    #[test]
+    fn trivy_incomplete_scan_scores_zero() {
+        let engines = vec![engine(
+            "trivy",
+            5,
+            serde_json::json!({
+                "scanComplete": false,
+                "error": "trivy returned empty output"
+            }),
+        )];
+        let score = compute(&engines, None, &settings());
+        let trivy = score
+            .categories
+            .iter()
+            .find(|c| c.id == "security_static")
+            .unwrap();
+        assert_eq!(trivy.stars, 0);
         assert!(!score.passed);
     }
 

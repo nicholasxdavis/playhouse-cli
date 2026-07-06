@@ -5,9 +5,18 @@ use crate::cli::output;
 use crate::tools;
 use crate::workspace;
 
-pub async fn run_init(ctx: &Context<'_>, stay_on_track: bool) -> i32 {
+pub async fn run_init(ctx: &Context<'_>, stay_on_track: bool, no_skill: bool) -> i32 {
     let enable_sot = stay_on_track || ctx.settings.stay_on_track_enabled;
-    match workspace::init_workspace(ctx.workspace, ctx.settings, true, enable_sot, ctx.json).await {
+    match workspace::init_workspace(
+        ctx.workspace,
+        ctx.settings,
+        true,
+        enable_sot,
+        !no_skill,
+        ctx.json,
+    )
+    .await
+    {
         Ok(report) => {
             if ctx.json {
                 output::print_json(&report);

@@ -23,7 +23,11 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
     /// Check which tools are installed and ready
-    Doctor,
+    Doctor {
+        /// Rebuild broken native Node bindings when detected
+        #[arg(long)]
+        resolve: bool,
+    },
 
     /// Install bundled tools (default: full web profile)
     Install {
@@ -41,6 +45,10 @@ pub enum Commands {
         /// Enable stay-on-track skill (.playhouse/stay-on-track/SKILL.md)
         #[arg(long)]
         stay_on_track: bool,
+
+        /// Skip installing .playhouse/SKILL.md even when the global setting is enabled
+        #[arg(long)]
+        no_skill: bool,
     },
 
     /// Full agent manifest, status, plan, or handoff bundle
@@ -139,6 +147,59 @@ pub enum Commands {
 
     /// Check for newer releases on GitHub and npm
     Upgrade,
+
+    /// Download and apply the latest Playhouse release
+    Update,
+
+    /// Remove bundled tools installed by Playhouse
+    Uninstall {
+        /// Remove global bundled binaries (Trivy, Arkenar) and cache
+        #[arg(long)]
+        global: bool,
+
+        /// Remove workspace .playhouse/npm tools
+        #[arg(long)]
+        workspace_tools: bool,
+
+        /// Skip confirmation prompt
+        #[arg(long)]
+        yes: bool,
+    },
+
+    /// Verify progress or workspace status
+    Status,
+
+    /// Configure authenticated browser audits
+    Auth {
+        #[command(subcommand)]
+        action: AuthAction,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum AuthAction {
+    /// Save audit headers for Lighthouse and Arkenar
+    Login {
+        /// Optional verify URL to set as default_url
+        #[arg(long)]
+        url: Option<String>,
+
+        /// Bearer token (sets Authorization: Bearer …)
+        #[arg(long)]
+        token: Option<String>,
+
+        #[arg(long, name = "header-name")]
+        header_name: Option<String>,
+
+        #[arg(long, name = "header-value")]
+        header_value: Option<String>,
+
+        #[arg(long)]
+        basic_user: Option<String>,
+
+        #[arg(long)]
+        basic_pass: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -147,6 +208,12 @@ pub enum AgentAction {
     Status,
     /// Phased workflow plan for this workspace
     Plan,
+    /// Project rules and read order only (token-efficient)
+    Rules,
+    /// Key file paths only (token-efficient)
+    Paths,
+    /// Single recommended next command (token-efficient)
+    NextAction,
     /// Run verify and write .playhouse/AGENT.json handoff bundle
     Handoff {
         #[arg(long)]

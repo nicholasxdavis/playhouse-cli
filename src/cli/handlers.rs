@@ -22,7 +22,8 @@ pub async fn run_verify(
     settings: &config::PlayhouseSettings,
 ) -> i32 {
     let mut resolved = url.map(String::from);
-    let _server_guard = if let Some(start_cmd) = options.start_server {
+    let mut dev_server_info: Option<dev_server::DevServerInfo> = None;
+    let server_guard = if let Some(start_cmd) = options.start_server {
         let ws_cfg = workspace::load_workspace_config(workspace);
         let url_hint = resolved
             .as_deref()
@@ -31,6 +32,13 @@ pub async fn run_verify(
         let cwd = workspace::scan_root(workspace);
         match dev_server::spawn_and_wait(&cwd, start_cmd, port, options.server_timeout).await {
             Ok((guard, server_url)) => {
+                dev_server_info = Some(dev_server::DevServerInfo {
+                    started: true,
+                    command: start_cmd.to_string(),
+                    port,
+                    url: server_url.clone(),
+                    stopped: false,
+                });
                 resolved = Some(server_url);
                 Some(guard)
             }
@@ -43,6 +51,12 @@ pub async fn run_verify(
                             "error": e,
                             "exitCode": 1,
                             "passed": false,
+                            "devServer": {
+                                "started": false,
+                                "command": start_cmd,
+                                "port": port,
+                                "stopped": false,
+                            },
                         })
                     );
                 } else {
@@ -70,19 +84,40 @@ pub async fn run_verify(
         }
     }
 
-    let report = audit::run_audit(
-        workspace,
-        resolved.as_deref(),
-        settings,
-        json,
-        options.test_pattern,
-    )
-    .await;
+    let report = if json {
+        audit::run_audit_with_progress(
+            workspace,
+            resolved.as_deref(),
+            settings,
+            true,
+            options.test_pattern,
+            Some(|event| crate::verify_progress::emit_step_stderr(&event)),
+        )
+        .await
+    } else {
+        audit::run_audit(
+            workspace,
+            resolved.as_deref(),
+            settings,
+            false,
+            options.test_pattern,
+        )
+        .await
+    };
+
+    drop(server_guard);
+    if let Some(ref mut ds) = dev_server_info {
+        ds.stopped = true;
+    }
 
     if json {
         println!(
             "{}",
-            serde_json::to_string_pretty(&audit::audit_json(&report)).unwrap_or_default()
+            serde_json::to_string_pretty(&audit::audit_json(
+                &report,
+                dev_server_info.as_ref()
+            ))
+            .unwrap_or_default()
         );
     }
 
@@ -136,7 +171,7 @@ pub async fn run_agent_handoff(
                 "agent": agent_path,
                 "score": tools::playhouse_dir(workspace).join("reports/score.json"),
             },
-            "audit": audit::audit_json(&report),
+            "audit": audit::audit_json(&report, None),
         });
         println!("{}", serde_json::to_string_pretty(&out).unwrap_or_default());
     } else {

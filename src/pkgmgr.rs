@@ -187,6 +187,7 @@ impl PackageManager {
         cmd.args(&refs)
             .current_dir(cwd)
             .env("PLAYWRIGHT_HTML_OPEN", "never");
+        crate::engines::functional::apply_headless_env(&mut cmd);
         if let Some(dir) = npm_dir {
             cmd.env("PATH", Self::path_env(dir));
         }
@@ -215,6 +216,7 @@ impl PackageManager {
     ) -> Result<Output, String> {
         let mut cmd = async_cmd(self.program());
         cmd.arg("test").current_dir(cwd);
+        crate::engines::functional::apply_headless_env(&mut cmd);
         if !extra.is_empty() {
             cmd.arg("--").args(extra);
         }
@@ -255,6 +257,62 @@ fn detect_from_lockfiles_at(root: &Path) -> Option<PackageManager> {
     None
 }
 
+pub fn has_node_lockfile(root: &Path) -> bool {
+    detect_from_lockfiles_at(root).is_some()
+}
+
+impl PackageManager {
+    pub async fn audit_high_critical(&self, cwd: &Path) -> Result<(u64, serde_json::Value), String> {
+        let mut cmd = async_cmd(self.program());
+        match self {
+            Self::Npm => {
+                cmd.args(["audit", "--json", "--audit-level=high"]);
+            }
+            Self::Pnpm => {
+                cmd.args(["audit", "--json"]);
+            }
+            Self::Yarn => {
+                cmd.args(["npm", "audit", "--json", "--audit-level=high"]);
+            }
+            Self::Bun => {
+                return Err("bun audit fallback not supported".into());
+            }
+        }
+        cmd.current_dir(cwd);
+        let out = cmd
+            .output()
+            .await
+            .map_err(|e| format!("{} audit failed: {e}", self.label()))?;
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        let data: serde_json::Value =
+            serde_json::from_str(&stdout).unwrap_or_else(|_| serde_json::json!({ "stdout": stdout.as_ref() }));
+        Ok((count_pm_audit_findings(&data), data))
+    }
+}
+
+fn count_pm_audit_findings(data: &serde_json::Value) -> u64 {
+    let mut count = 0u64;
+    if let Some(vulns) = data.get("vulnerabilities").and_then(|v| v.as_object()) {
+        for (_, info) in vulns {
+            let sev = info
+                .get("severity")
+                .and_then(|s| s.as_str())
+                .unwrap_or("")
+                .to_lowercase();
+            if sev == "high" || sev == "critical" || sev == "moderate" {
+                count += 1;
+            }
+        }
+    }
+    if let Some(meta) = data.get("metadata").and_then(|m| m.get("vulnerabilities")) {
+        count = count.max(
+            meta.get("high").and_then(|v| v.as_u64()).unwrap_or(0)
+                + meta.get("critical").and_then(|v| v.as_u64()).unwrap_or(0),
+        );
+    }
+    count
+}
+
 fn stderr_or_stdout(out: &Output) -> String {
     let err = String::from_utf8_lossy(&out.stderr).trim().to_string();
     if !err.is_empty() {
@@ -266,6 +324,42 @@ fn stderr_or_stdout(out: &Output) -> String {
             .unwrap_or("command failed")
             .to_string()
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InstallErrorKind {
+    FileLock,
+    InstallFailed,
+}
+
+impl InstallErrorKind {
+    pub fn classify(err: &str) -> Self {
+        if is_fs_lock_error(err) {
+            Self::FileLock
+        } else {
+            Self::InstallFailed
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::FileLock => "file_lock",
+            Self::InstallFailed => "install_failed",
+        }
+    }
+
+    pub fn remediation(self) -> Option<&'static str> {
+        match self {
+            Self::FileLock => Some(
+                "Close IDE or antivirus locks on node_modules, then retry: playhouse install --json",
+            ),
+            Self::InstallFailed => None,
+        }
+    }
+}
+
+pub fn classify_install_error(err: &str) -> InstallErrorKind {
+    InstallErrorKind::classify(err)
 }
 
 pub fn is_fs_lock_error(err: &str) -> bool {
@@ -298,5 +392,17 @@ mod tests {
         assert!(is_fs_lock_error("npm ERR! EPERM: operation not permitted"));
         assert!(is_fs_lock_error("EBUSY: resource temporarily unavailable"));
         assert!(!is_fs_lock_error("package not found"));
+    }
+
+    #[test]
+    fn classifies_file_lock_kind() {
+        assert_eq!(
+            classify_install_error("EPERM: operation not permitted"),
+            InstallErrorKind::FileLock
+        );
+        assert_eq!(
+            classify_install_error("404 Not Found"),
+            InstallErrorKind::InstallFailed
+        );
     }
 }

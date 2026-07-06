@@ -58,7 +58,7 @@ pub async fn run_score(ctx: &Context<'_>, url: Option<String>, last: bool) -> i3
     let target = url.or_else(|| workspace::resolve_verify_url(ctx.workspace, ctx.settings));
     let report = audit::run_audit(ctx.workspace, target.as_deref(), ctx.settings, ctx.json, None).await;
     if ctx.json {
-        output::print_json(&audit::audit_json(&report));
+        output::print_json(&audit::audit_json(&report, None));
     }
     report.exit_code
 }

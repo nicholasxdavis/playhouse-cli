@@ -26,6 +26,21 @@ Default **pass threshold**: **75** (`star_pass_threshold` in settings). Verify f
 
 Each engine normalizes to 0-100, then weights combine. Explicit skips (settings, N/A stack) rebalance weights. Missing or unreachable browser audits score 0/100 without rebalancing.
 
+## Engine run states
+
+Verify uses the same state labels in terminal output, audit JSON, and `.playhouse/reports/score.json`.
+
+| State | Meaning | Score impact |
+|-------|---------|--------------|
+| **Ran** | Engine completed | Category score from results |
+| **Skipped (explicit)** | User opt-out or N/A stack | Weight rebalances to other categories |
+| **Not run (implicit)** | No URL or unreachable endpoint with `skip_lighthouse_without_server` enabled | 0/100 for that category, weight kept |
+| **Failed (required)** | Browser audit required but URL missing when `skip_lighthouse_without_server` is false | Verify fails, 0/100 |
+
+Per-engine JSON includes `exitCode` matching the Playhouse process exit codes (0 pass, 1 test failure, 2 Lighthouse threshold, 3 Arkenar findings, 4 Trivy findings, 5 missing tools). When the underlying tool exit differs, `toolExitCode` is also set.
+
+Incomplete or crashed scans set `scanComplete: false` and score 0/100 for that category.
+
 | Category | Weight | Engine |
 |----------|-------:|--------|
 | Toolchain | 10% | `playhouse doctor` |

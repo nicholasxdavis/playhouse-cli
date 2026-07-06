@@ -16,6 +16,8 @@ env:
 jobs:
   version-sync:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -38,6 +40,8 @@ jobs:
             target: x86_64-pc-windows-msvc
 
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -49,14 +53,18 @@ jobs:
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
           prefix-key: ci-${{ matrix.os }}-${{ matrix.target }}
-          shared-key: v1
+          shared-key: cargo-lock-${{ hashFiles('Cargo.lock') }}
           save-if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
       - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
+        env:
+          RUST_TARGET: ${{ matrix.target }}
+        run: cargo build --release --target "$RUST_TARGET"
 
       - name: Unit and integration tests
-        run: cargo test --target ${{ matrix.target }}
+        env:
+          RUST_TARGET: ${{ matrix.target }}
+        run: cargo test --target "$RUST_TARGET"
 
       - name: Clippy (deny warnings)
         run: cargo clippy --all-targets -- -D warnings
@@ -69,6 +77,8 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -113,6 +123,8 @@ jobs:
             bin: target/release/playhouse.exe
 
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -122,7 +134,7 @@ jobs:
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
           prefix-key: verify-${{ matrix.os }}
-          shared-key: v1
+          shared-key: cargo-lock-${{ hashFiles('Cargo.lock') }}
           save-if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
       - name: Build release binary

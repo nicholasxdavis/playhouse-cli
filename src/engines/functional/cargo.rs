@@ -1,5 +1,5 @@
 use crate::cmd::r#async as async_cmd;
-use crate::engines::functional::{build_metrics, resolve_exit_code};
+use crate::engines::functional::{apply_headless_env, build_metrics, resolve_exit_code};
 use crate::engines::metrics_util::attach_failure_output;
 
 pub async fn execute(workspace: &str, pattern: Option<&str>) -> (i32, serde_json::Value) {
@@ -22,10 +22,10 @@ pub async fn execute(workspace: &str, pattern: Option<&str>) -> (i32, serde_json
         if let Some(p) = pattern {
             cmd.arg(p);
         }
+        apply_headless_env(&mut cmd);
         cmd.current_dir(workspace);
         crate::cmd::output_with_timeout(&mut cmd).await
     };
-
     match out {
         Ok(o) => {
             let stdout = String::from_utf8_lossy(&o.stdout);

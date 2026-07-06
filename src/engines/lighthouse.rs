@@ -137,7 +137,7 @@ async fn exec_lighthouse(
         "--quiet".into(),
         "--chrome-flags=--headless".into(),
     ];
-    if let Some(headers) = crate::workspace::audit_headers(workspace) {
+    if let Some(headers) = crate::workspace::resolved_audit_headers(workspace) {
         if !headers.is_empty() {
             lh_args.push(format!(
                 "--extra-headers={}",

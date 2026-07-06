@@ -440,18 +440,20 @@ pub fn check_local_server(workspace: &str) -> HealthCheck {
 
 pub fn check_workspace_deps(workspace: &str, package_manager: &str) -> HealthCheck {
     let scan = crate::workspace::scan_root(workspace);
-    if !scan.join("package.json").is_file() {
+    let is_node_project = scan.join("package.json").is_file();
+    if !is_node_project {
         return HealthCheck::pass("Workspace dependencies", "n/a (no package.json)");
     }
+
     let node_modules = scan.join("node_modules");
-    if node_modules.is_dir() {
-        if std::fs::read_dir(&node_modules)
+    let has_installed_deps = node_modules.is_dir()
+        && std::fs::read_dir(&node_modules)
             .map(|mut d| d.next().is_some())
-            .unwrap_or(false)
-        {
-            return HealthCheck::pass("Workspace dependencies", "node_modules present");
-        }
+            .unwrap_or(false);
+    if has_installed_deps {
+        return HealthCheck::pass("Workspace dependencies", "node_modules present");
     }
+
     let pm = PackageManager::resolve(workspace, package_manager);
     let hint = match pm {
         PackageManager::Npm => "npm install",
@@ -461,8 +463,119 @@ pub fn check_workspace_deps(workspace: &str, package_manager: &str) -> HealthChe
     };
     HealthCheck::warn(
         "Workspace dependencies",
-        &format!("node_modules missing or empty - run {hint}"),
+        &format!(
+            "node_modules missing or empty - run {hint}{}",
+            windows_install_lock_note()
+        ),
     )
+}
+
+#[cfg(windows)]
+fn windows_install_lock_note() -> &'static str {
+    "; if install fails with EPERM/EBUSY, close IDE/antivirus locks and run playhouse install --json"
+}
+
+#[cfg(not(windows))]
+fn windows_install_lock_note() -> &'static str {
+    ""
+}
+
+const NATIVE_PROBE_DEPS: &[&str] = &[
+    "sqlite3",
+    "better-sqlite3",
+    "bcrypt",
+    "sharp",
+    "canvas",
+    "node-sass",
+    "argon2",
+];
+
+pub fn check_native_bindings(workspace: &str) -> HealthCheck {
+    let scan = crate::workspace::scan_root(workspace);
+    if !scan.join("package.json").is_file() {
+        return HealthCheck::pass("Native bindings", "n/a (no package.json)");
+    }
+    let node_modules = scan.join("node_modules");
+    if !node_modules.is_dir() {
+        return HealthCheck::warn(
+            "Native bindings",
+            "node_modules missing — run install before probing native modules",
+        );
+    }
+
+    let deps = native_deps_in_project(&scan);
+    if deps.is_empty() {
+        return HealthCheck::pass("Native bindings", "no known native deps declared");
+    }
+
+    let dep_count = deps.len();
+    let mut failures = Vec::new();
+    for dep in &deps {
+        if let Some(err) = probe_native_module(&scan, &dep) {
+            failures.push(format!("{dep}: {err}"));
+        }
+    }
+
+    if failures.is_empty() {
+        HealthCheck::pass("Native bindings", &format!("{dep_count} module(s) load OK"))
+    } else {
+        HealthCheck::warn(
+            "Native bindings",
+            &format!(
+                "{} — try: playhouse doctor --resolve",
+                failures.join("; ")
+            ),
+        )
+    }
+}
+
+fn native_deps_in_project(scan: &std::path::Path) -> Vec<String> {
+    let content = match std::fs::read_to_string(scan.join("package.json")) {
+        Ok(c) => c,
+        Err(_) => return vec![],
+    };
+    let pkg: serde_json::Value = match serde_json::from_str(&content) {
+        Ok(v) => v,
+        Err(_) => return vec![],
+    };
+    let mut found = Vec::new();
+    for key in ["dependencies", "devDependencies", "optionalDependencies"] {
+        if let Some(obj) = pkg.get(key).and_then(|v| v.as_object()) {
+            for dep in NATIVE_PROBE_DEPS {
+                if obj.contains_key(*dep) {
+                    found.push(dep.to_string());
+                }
+            }
+        }
+    }
+    found.sort();
+    found.dedup();
+    found
+}
+
+fn probe_native_module(scan: &std::path::Path, dep: &str) -> Option<String> {
+    if !scan.join("node_modules").join(dep).is_dir() {
+        return None;
+    }
+    let script = format!("try{{require('{dep}');}}catch(e){{console.error(e.message);process.exit(1)}}");
+    let out = crate::cmd::sync("node")
+        .args(["-e", &script])
+        .current_dir(scan)
+        .output()
+        .ok()?;
+    if out.status.success() {
+        None
+    } else {
+        Some(
+            String::from_utf8_lossy(&out.stderr)
+                .lines()
+                .next()
+                .unwrap_or("load failed")
+                .chars()
+                .take(120)
+                .collect(),
+        )
+    }
 }
 
 pub fn check_arkenar() -> HealthCheck {
@@ -557,6 +670,7 @@ pub fn run_doctor(workspace: &str) -> Vec<HealthCheck> {
         checks.push(check_package_manager(workspace));
         checks.push(check_npm());
         checks.push(check_workspace_deps(workspace, &settings.package_manager));
+        checks.push(check_native_bindings(workspace));
         if project::needs_alt_package_manager_checks(workspace, &settings.package_manager) {
             checks.push(check_pnpm());
             checks.push(check_yarn());

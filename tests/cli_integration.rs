@@ -66,6 +66,41 @@ fn functional_runs_in_fixture_crate() {
     let v: serde_json::Value = serde_json::from_str(&stdout).expect("valid JSON");
     assert_eq!(v["runner"], "cargo-test");
     assert_eq!(v["stats"]["passed"], 1);
+    assert_eq!(v["headlessEnv"], true);
+}
+
+#[test]
+fn config_schema_includes_validation_rules() {
+    let stdout = run_ok(&["config", "schema", "--json"], &repo_root());
+    let v: serde_json::Value = serde_json::from_str(&stdout).expect("valid JSON");
+    let keys = v["keys"].as_array().unwrap();
+    let pm = keys
+        .iter()
+        .find(|k| k["key"] == "package_manager")
+        .expect("package_manager key");
+    assert!(pm.get("validation").is_some());
+    assert!(pm["validation"]["enum"].as_array().unwrap().len() >= 5);
+}
+
+#[test]
+fn config_set_rejects_invalid_url() {
+    let temp = std::env::temp_dir().join(format!("playhouse-cfg-it-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&temp);
+    fs::create_dir_all(temp.join(".playhouse")).unwrap();
+    let out = Command::new(playhouse_bin())
+        .args([
+            "-C",
+            temp.to_str().unwrap(),
+            "config",
+            "set",
+            "default_url",
+            "not-a-url",
+            "--json",
+        ])
+        .output()
+        .unwrap();
+    assert!(!out.status.success());
+    let _ = fs::remove_dir_all(&temp);
 }
 
 #[test]

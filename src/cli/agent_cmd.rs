@@ -18,6 +18,18 @@ pub async fn run(ctx: &Context<'_>, action: Option<AgentAction>) -> i32 {
             output::print_json(&agent::plan(ctx.workspace));
             0
         }
+        Some(AgentAction::Rules) => {
+            output::print_json(&agent::rules_json(ctx.workspace));
+            0
+        }
+        Some(AgentAction::Paths) => {
+            output::print_json(&agent::paths_json(ctx.workspace));
+            0
+        }
+        Some(AgentAction::NextAction) => {
+            output::print_json(&agent::next_action_json(ctx.workspace));
+            0
+        }
         Some(AgentAction::Handoff { url }) => {
             handlers::run_agent_handoff(ctx.workspace, url.as_deref(), ctx.json, ctx.settings).await
         }

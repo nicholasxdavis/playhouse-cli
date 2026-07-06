@@ -63,7 +63,7 @@ jobs:
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
           prefix-key: release-${{ matrix.os }}-${{ matrix.target }}
-          shared-key: v1
+          shared-key: cargo-lock-${{ hashFiles('Cargo.lock') }}
           save-if: ${{ github.ref_type == 'tag' }}
 
       - name: Read version
@@ -72,7 +72,9 @@ jobs:
         run: echo "value=$(grep '^version' Cargo.toml | head -1 | sed 's/.*\"\(.*\)\".*/\1/')" >> "$GITHUB_OUTPUT"
 
       - name: Build release binary
-        run: cargo build --release --target ${{ matrix.target }}
+        env:
+          RUST_TARGET: ${{ matrix.target }}
+        run: cargo build --release --target "$RUST_TARGET"
 
       - name: Package (zip)
         if: matrix.archive == 'zip'
@@ -107,6 +109,7 @@ jobs:
           path: ${{ env.ASSET }}
           retention-days: 7
           if-no-files-found: error
+          compression-level: 6
 
   release:
     needs: build

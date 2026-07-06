@@ -34,6 +34,15 @@ impl InstallProfile {
     }
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct InstallIssue {
+    pub component: String,
+    pub message: String,
+    pub error_kind: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub remediation: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct InstallReport {
     pub profile: String,
@@ -43,6 +52,8 @@ pub struct InstallReport {
     pub lighthouse: bool,
     pub messages: Vec<String>,
     pub errors: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub issues: Vec<InstallIssue>,
 }
 
 impl InstallReport {
@@ -70,7 +81,7 @@ pub async fn ensure_profile(
             report.trivy = true;
             report.messages.push(msg);
         }
-        Err(e) => report.errors.push(sanitize_error("trivy", &e)),
+        Err(e) => record_install_error(&mut report, "trivy", &e),
     }
 
     match ensure_arkenar(quiet).await {
@@ -78,7 +89,7 @@ pub async fn ensure_profile(
             report.arkenar = true;
             report.messages.push(msg);
         }
-        Err(e) => report.errors.push(sanitize_error("arkenar", &e)),
+        Err(e) => record_install_error(&mut report, "arkenar", &e),
     }
 
     if profile == InstallProfile::Full {
@@ -89,12 +100,25 @@ pub async fn ensure_profile(
                 report.messages.extend(msgs);
             }
             Err(e) => {
-                report.errors.push(sanitize_error("web-tools", &e));
+                record_install_error(&mut report, "web-tools", &e);
             }
         }
     }
 
     report
+}
+
+fn record_install_error(report: &mut InstallReport, component: &str, err: &str) {
+    let kind = crate::pkgmgr::classify_install_error(err);
+    report
+        .errors
+        .push(sanitize_error(component, err));
+    report.issues.push(InstallIssue {
+        component: component.into(),
+        message: err.lines().next().unwrap_or(err).trim().chars().take(500).collect(),
+        error_kind: kind.as_str().into(),
+        remediation: kind.remediation().map(String::from),
+    });
 }
 
 fn sanitize_error(tool: &str, err: &str) -> String {

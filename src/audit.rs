@@ -1,5 +1,6 @@
 use crate::config::PlayhouseSettings;
 use crate::detect;
+use crate::engine_status;
 use crate::engines;
 use crate::install;
 use crate::project::{self, FunctionalRunner, ProjectProfile};
@@ -40,7 +41,9 @@ pub async fn run_audit_with_progress<F>(
 where
     F: FnMut(AuditProgress),
 {
+    let mut tracker = crate::verify_progress::Tracker::start(workspace);
     let mut progress = |event: AuditProgress| {
+        tracker.handle(&event);
         if let Some(ref mut cb) = on_progress {
             cb(event);
         }
@@ -80,6 +83,7 @@ where
                 score: playhouse_score,
                 engines: vec![],
                 doctor,
+                test_pattern: test_pattern.map(String::from),
             };
         }
     } else {
@@ -117,6 +121,7 @@ where
             score: playhouse_score,
             engines: vec![],
             doctor,
+            test_pattern: test_pattern.map(String::from),
         };
     }
 
@@ -255,6 +260,7 @@ where
         score: playhouse_score,
         engines,
         doctor,
+        test_pattern: test_pattern.map(String::from),
     }
 }
 
@@ -391,11 +397,7 @@ fn push_browser_missing<F>(
     if settings.skip_lighthouse_without_server {
         engines.push(score::implicit_penalty("arkenar", reason));
         engines.push(score::implicit_penalty("lighthouse", reason));
-        let detail: String = if reason.starts_with("url-unreachable") {
-            "URL not reachable; skipped".into()
-        } else {
-            "No URL; skipped".into()
-        };
+        let detail = engine_status::browser_not_run_detail(reason);
         progress(AuditProgress::StepDone {
             id: "arkenar",
             label: "Arkenar DAST".into(),
@@ -448,6 +450,7 @@ pub struct AuditReport {
     pub score: PlayhouseScore,
     pub engines: Vec<EngineResult>,
     pub doctor: Vec<crate::types::HealthCheck>,
+    pub test_pattern: Option<String>,
 }
 
 fn functional_stats(metrics: &serde_json::Value) -> (u64, u64, u64, bool) {
@@ -497,25 +500,36 @@ fn print_summary(score: &PlayhouseScore, engines: &[EngineResult]) {
         println!("  - {line}");
     }
     println!();
-    println!("Engine exit codes:");
+    println!("Engine results:");
     for er in engines {
-        if er.skipped {
-            println!("  [-] {} (skipped)", er.engine);
-        } else {
-            let icon = if er.exit_code == 0 { "[*]" } else { "[x]" };
-            println!("  {icon} {}: exit {}", er.engine, er.exit_code);
-        }
+        let icon = match engine_status::EngineRunKind::from_engine(er) {
+            engine_status::EngineRunKind::Ran if er.exit_code == 0 => "[*]",
+            engine_status::EngineRunKind::Ran => "[x]",
+            engine_status::EngineRunKind::ExplicitSkip => "[-]",
+            engine_status::EngineRunKind::ImplicitPenalty => "[!]",
+        };
+        println!("  {icon} {}", engine_status::engine_label(er));
     }
     println!();
     println!("Report: .playhouse/reports/score.json");
 }
 
-pub fn audit_json(report: &AuditReport) -> serde_json::Value {
-    serde_json::json!({
+pub fn audit_json(
+    report: &AuditReport,
+    dev_server: Option<&crate::dev_server::DevServerInfo>,
+) -> serde_json::Value {
+    let mut out = serde_json::json!({
         "command": "audit",
         "exitCode": report.exit_code,
         "playhouseScore": report.score,
         "engines": report.engines,
         "doctor": report.doctor,
-    })
+    });
+    if let Some(ref pattern) = report.test_pattern {
+        out["testPattern"] = serde_json::json!(pattern);
+    }
+    if let Some(ds) = dev_server {
+        out["devServer"] = serde_json::to_value(ds).unwrap_or_default();
+    }
+    out
 }
