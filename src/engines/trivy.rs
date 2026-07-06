@@ -34,7 +34,7 @@ pub async fn execute(workspace: &str, options: &TrivyOptions) -> (i32, Value) {
     let settings = load_settings();
     let severity = settings.trivy_severity.replace(' ', "");
     let scan = crate::workspace::scan_root_str(workspace);
-    let cache_dir = tools::playhouse_dir(workspace).join("cache").join("trivy");
+    let cache_dir = crate::config::playhouse_home().join("cache").join("trivy");
     let _ = std::fs::create_dir_all(&cache_dir);
 
     if options.clear_cache {
@@ -174,12 +174,12 @@ async fn run_trivy_pass(
     cache_dir: &Path,
     skip_dirs: &[String],
 ) -> Result<(Value, i32), String> {
+    let report_path = std::env::temp_dir().join(format!("playhouse-trivy-{}.json", std::process::id()));
     let mut cmd = async_cmd(trivy);
     cmd.args([
         "fs",
         "--scanners",
         "vuln,secret",
-        "--hidden",
         "--severity",
         severity,
         "--format",
@@ -187,6 +187,8 @@ async fn run_trivy_pass(
         "--quiet",
         "--cache-dir",
         &cache_dir.to_string_lossy(),
+        "--output",
+        &report_path.to_string_lossy(),
     ]);
     for dir in skip_dirs {
         cmd.arg("--skip-dirs").arg(dir);
@@ -197,15 +199,26 @@ async fn run_trivy_pass(
         .await
         .map_err(|e| format!("Failed to run trivy: {e}"))?;
 
-    let stdout = String::from_utf8_lossy(&out.stdout).trim().to_string();
     let tool_exit = out.status.code().unwrap_or(1);
+    let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
 
-    if stdout.is_empty() {
+    let json_text = std::fs::read_to_string(&report_path).map_err(|e| {
+        let detail = if stderr.is_empty() {
+            e.to_string()
+        } else {
+            format!("{e}; trivy stderr: {stderr}")
+        };
+        format!("trivy report missing at {}: {detail}", report_path.display())
+    })?;
+    let _ = std::fs::remove_file(&report_path);
+
+    let json_text = json_text.trim();
+    if json_text.is_empty() {
         return Err("trivy returned empty output".into());
     }
 
     let data: Value =
-        serde_json::from_str(&stdout).map_err(|e| format!("failed to parse trivy JSON: {e}"))?;
+        serde_json::from_str(json_text).map_err(|e| format!("failed to parse trivy JSON: {e}"))?;
     Ok((data, tool_exit))
 }
 

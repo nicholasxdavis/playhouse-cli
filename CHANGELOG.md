@@ -2,6 +2,18 @@
 
 All notable changes to Playhouse CLI are documented here.
 
+## [0.3.3] — unreleased
+
+### CI
+- Fix verify-smoke: run against `tests/fixtures/rust-app`, fix Trivy 0.72 flags (`--hidden`, `--log-level`) and JSON capture via `--output`
+
+### TUI
+- Restore `/version`, `/uninstall`, `/auth login`, `/test` subcommands
+- Natural-language shortcuts: "what version?", "help", "uninstall", etc.
+
+### Tooling
+- Migrate release scripts to TypeScript (`scripts/*.ts` + `tsx`)
+
 ## [0.3.2] — 2026-07-06
 
 ### CI / quality

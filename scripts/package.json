@@ -1,0 +1,14 @@
+{
+  "name": "playhouse-scripts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check-version-sync": "tsx check-version-sync.ts",
+    "update-homebrew-formula": "tsx update-homebrew-formula.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

@@ -10,7 +10,18 @@ use crate::tui::keys::{
 use crate::tui::tasks::TaskEvent;
 
 fn temp_workspace() -> String {
-    let dir = std::env::temp_dir().join(format!("playhouse-tui-it-{}", std::process::id()));
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static N: AtomicU64 = AtomicU64::new(0);
+    let n = N.fetch_add(1, Ordering::Relaxed);
+    let dir = std::env::temp_dir().join(format!(
+        "playhouse-tui-it-{}-{}-{}",
+        std::process::id(),
+        n,
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     dir.to_string_lossy().into_owned()
@@ -135,7 +146,17 @@ fn help_menu_escape_returns_normal() {
 fn slash_commands_include_v030_wiring() {
     let app = test_app();
     let cmds: Vec<&str> = app.slash_commands.iter().map(|c| c.command.as_str()).collect();
-    for expected in ["/functional", "/status", "/upgrade", "/update", "/agent"] {
+    for expected in [
+        "/functional",
+        "/status",
+        "/upgrade",
+        "/update",
+        "/agent",
+        "/version",
+        "/uninstall",
+        "/auth",
+        "/test",
+    ] {
         assert!(cmds.contains(&expected), "missing slash command {expected}");
     }
 }
@@ -164,6 +185,23 @@ fn execute_status_emits_json() {
     let tx = noop_task_tx();
     execute_command(&mut app, "/status", &tx);
     assert!(feed_json_contains(&app, "\"command\""));
+}
+
+#[test]
+fn execute_version_emits_json() {
+    let mut app = test_app();
+    let tx = noop_task_tx();
+    execute_command(&mut app, "/version", &tx);
+    assert!(feed_json_contains(&app, env!("CARGO_PKG_VERSION")));
+}
+
+#[test]
+fn natural_version_question_works() {
+    let mut app = test_app();
+    let tx = noop_task_tx();
+    app.input_text = "what version?".into();
+    submit_input(&mut app, &tx);
+    assert!(feed_json_contains(&app, env!("CARGO_PKG_VERSION")));
 }
 
 #[test]

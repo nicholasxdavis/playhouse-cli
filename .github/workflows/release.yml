@@ -19,8 +19,10 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
+      - name: Install script tooling
+        run: npm ci --prefix scripts
       - name: Cargo.toml npm version sync
-        run: node scripts/check-version-sync.js
+        run: npm run check-version-sync --prefix scripts
 
   build:
     needs: version-sync
@@ -132,8 +134,11 @@ jobs:
         with:
           node-version: 20
 
+      - name: Install script tooling
+        run: npm ci --prefix scripts
+
       - name: Update Homebrew formula sha256
-        run: node scripts/update-homebrew-formula.js artifacts
+        run: npm run update-homebrew-formula --prefix scripts -- artifacts
 
       - name: Commit formula update
         run: |
@@ -178,8 +183,10 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
+      - name: Install script tooling
+        run: npm ci --prefix scripts
       - name: Verify npm package version matches Cargo.toml
-        run: node scripts/check-version-sync.js
+        run: npm run check-version-sync --prefix scripts
 
   npm-publish:
     needs: npm-version-check

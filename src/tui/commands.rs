@@ -1,12 +1,17 @@
 use tokio::sync::mpsc;
 
 use crate::agent;
+use crate::auth;
+use crate::baseplates;
 use crate::config_cli;
+use crate::detect;
+use crate::project;
 use crate::score;
 use crate::tui::app::{App, AppMode, FeedRole, TaskKind, VerifyParams};
 use crate::tui::config;
 use crate::tui::tasks::{spawn_task, TaskEvent};
 use crate::tui::ui_blocks::ContentBlock;
+use crate::uninstall;
 use crate::update;
 use crate::upgrade;
 use crate::verify_progress;
@@ -22,6 +27,8 @@ pub fn submit_input(app: &mut App, task_tx: &mpsc::UnboundedSender<TaskEvent>) {
     }
     if text.starts_with('/') {
         execute_command(app, &text, task_tx);
+    } else if let Some(cmd) = natural_to_slash(&text) {
+        execute_command(app, &cmd, task_tx);
     } else if app.is_busy() {
         app.push_system("Wait for the current task to finish.");
     } else {
@@ -235,7 +242,144 @@ pub fn execute_command(app: &mut App, command: &str, task_tx: &mpsc::UnboundedSe
             app.feed_scroll_target = 0.0;
         }
         "/quit" | "/exit" => app.running = false,
+        "/version" | "/v" => show_version(app),
+        "/uninstall" => run_uninstall(app, &parts),
+        "/auth" => match parts.get(1).map(|s| s.to_lowercase()).as_deref() {
+            Some("login") => run_auth_login(app, &parts),
+            _ => app.push_system(
+                "Usage: /auth login --token TOKEN [--url URL] | --header-name N --header-value V | --basic-user U --basic-pass P",
+            ),
+        },
+        "/test" => match parts.get(1).map(|s| s.to_lowercase()).as_deref() {
+            Some("list") => {
+                let profile = project::detect(&app.workspace);
+                push_json(app, &baseplates::list_plates(&profile));
+            }
+            Some("init") => {
+                let plate = parts
+                    .iter()
+                    .position(|p| *p == "--plate")
+                    .and_then(|i| parts.get(i + 1).copied());
+                let force = parts.contains(&"--force");
+                match baseplates::init_plate(&app.workspace, plate, force) {
+                    Ok(report) => push_json(app, &report),
+                    Err(e) => app.push_system(&format!("Test init failed: {e}")),
+                }
+            }
+            Some("add") => {
+                let plate = parts
+                    .iter()
+                    .position(|p| *p == "--plate")
+                    .and_then(|i| parts.get(i + 1).copied());
+                let force = parts.contains(&"--force");
+                match plate {
+                    Some(id) => match baseplates::add_plate(&app.workspace, id, force) {
+                        Ok(report) => push_json(app, &report),
+                        Err(e) => app.push_system(&format!("Test add failed: {e}")),
+                    },
+                    None => app.push_system("Usage: /test add --plate PLATE_ID [--force]"),
+                }
+            }
+            Some("run") => start_task(
+                app,
+                task_tx,
+                TaskKind::Functional {
+                    pattern: parts.get(2).map(|s| (*s).to_string()),
+                },
+            ),
+            _ => app.push_system("Usage: /test list | init [--plate ID] [--force] | add --plate ID | run"),
+        },
         other => app.push_system(&format!("Unknown command: {other}. Type /help")),
+    }
+}
+
+/// Map common plain-text questions to slash commands (TUI-friendly).
+fn natural_to_slash(text: &str) -> Option<String> {
+    let normalized = text
+        .trim()
+        .trim_end_matches('?')
+        .trim_end_matches('.')
+        .to_lowercase();
+    match normalized.as_str() {
+        "version" | "what version" | "playhouse version" | "what's the version"
+        | "whats the version" | "current version" => Some("/version".into()),
+        "upgrade" | "check for updates" | "any updates" => Some("/upgrade".into()),
+        "update" | "update playhouse" => Some("/update".into()),
+        "help" | "commands" | "what can you do" => Some("/help".into()),
+        "doctor" | "health" | "tool health" => Some("/doctor".into()),
+        "verify" | "run verify" | "full verify" => Some("/verify".into()),
+        "uninstall" | "remove tools" | "remove playhouse tools" => {
+            Some("/uninstall".into())
+        }
+        "quit" | "exit" | "bye" => Some("/quit".into()),
+        _ => None,
+    }
+}
+
+fn show_version(app: &mut App) {
+    let version = env!("CARGO_PKG_VERSION");
+    let install = detect::run_doctor(&app.workspace)
+        .into_iter()
+        .find(|c| c.name == "Playhouse CLI")
+        .map(|c| c.detail)
+        .unwrap_or_else(|| "unknown".into());
+    push_json(
+        app,
+        &serde_json::json!({
+            "command": "version",
+            "version": version,
+            "install": install,
+        }),
+    );
+}
+
+fn run_uninstall(app: &mut App, parts: &[&str]) {
+    let global = parts.contains(&"--global");
+    let workspace_tools = parts.contains(&"--workspace-tools");
+    let yes = parts.contains(&"--yes");
+    if !yes {
+        app.push_system(
+            "Uninstall removes bundled Trivy/Arkenar and workspace npm tools.\n\
+             Re-run: /uninstall --yes [--global] [--workspace-tools]",
+        );
+        return;
+    }
+    let remove_global = global || !workspace_tools;
+    let remove_ws = workspace_tools || !global;
+    let report = uninstall::uninstall_all(&app.workspace, remove_global, remove_ws);
+    push_json(app, &report);
+}
+
+fn run_auth_login(app: &mut App, parts: &[&str]) {
+    let flag = |name: &str| -> Option<String> {
+        parts
+            .iter()
+            .position(|p| p.eq_ignore_ascii_case(name))
+            .and_then(|i| parts.get(i + 1))
+            .map(|s| (*s).to_string())
+    };
+    let headers = match auth::login_headers(
+        flag("--token").as_deref(),
+        flag("--header-name").as_deref(),
+        flag("--header-value").as_deref(),
+        flag("--basic-user").as_deref(),
+        flag("--basic-pass").as_deref(),
+    ) {
+        Ok(h) => h,
+        Err(e) => {
+            app.push_system(&e);
+            return;
+        }
+    };
+    if let Some(url) = flag("--url") {
+        if let Err(e) = auth::set_default_url_if_provided(&app.workspace, Some(&url)) {
+            app.push_system(&format!("Config set failed: {e}"));
+            return;
+        }
+    }
+    match auth::save_auth_headers(&app.workspace, headers) {
+        Ok(v) => push_json(app, &v),
+        Err(e) => app.push_system(&format!("Auth login failed: {e}")),
     }
 }
 
@@ -418,5 +562,12 @@ mod tests {
         let p = parse_verify_flags(&parts);
         assert_eq!(p.url.as_deref(), Some("https://example.com"));
         assert_eq!(p.test_pattern.as_deref(), Some("smoke"));
+    }
+
+    #[test]
+    fn natural_to_slash_maps_version_questions() {
+        assert_eq!(natural_to_slash("what version?"), Some("/version".into()));
+        assert_eq!(natural_to_slash("help"), Some("/help".into()));
+        assert_eq!(natural_to_slash("random note"), None);
     }
 }

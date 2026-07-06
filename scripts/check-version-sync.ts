@@ -1,16 +1,18 @@
 #!/usr/bin/env node
-'use strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const fs = require('fs');
-const path = require('path');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-const root = path.resolve(__dirname, '..');
 const cargoToml = fs.readFileSync(path.join(root, 'Cargo.toml'), 'utf8');
 const cargoMatch = cargoToml.match(/^version\s*=\s*"([^"]+)"/m);
-const npmPkg = require(path.join(root, 'packages/playhouse/package.json'));
+const npmPkg = JSON.parse(
+  fs.readFileSync(path.join(root, 'packages/playhouse/package.json'), 'utf8'),
+) as { version: string };
 const homebrew = fs.readFileSync(
   path.join(root, 'packaging/homebrew/playhouse.rb'),
-  'utf8'
+  'utf8',
 );
 const homebrewMatch = homebrew.match(/^\s*version\s+'([^']+)'/m);
 
@@ -21,13 +23,13 @@ if (!cargoMatch) {
 
 const cargoVer = cargoMatch[1];
 const npmVer = npmPkg.version;
-const homebrewVer = homebrewMatch ? homebrewMatch[1] : null;
+const homebrewVer = homebrewMatch?.[1] ?? null;
 
 let failed = false;
 
 if (cargoVer !== npmVer) {
   console.error(
-    `Version mismatch: Cargo.toml=${cargoVer} packages/playhouse/package.json=${npmVer}`
+    `Version mismatch: Cargo.toml=${cargoVer} packages/playhouse/package.json=${npmVer}`,
   );
   failed = true;
 }
@@ -37,14 +39,14 @@ if (!homebrewVer) {
   failed = true;
 } else if (cargoVer !== homebrewVer) {
   console.error(
-    `Version mismatch: Cargo.toml=${cargoVer} packaging/homebrew/playhouse.rb=${homebrewVer}`
+    `Version mismatch: Cargo.toml=${cargoVer} packaging/homebrew/playhouse.rb=${homebrewVer}`,
   );
   failed = true;
 }
 
 if (homebrew.includes('REPLACE_ON_RELEASE')) {
   console.warn(
-    'Warning: packaging/homebrew/playhouse.rb still has REPLACE_ON_RELEASE sha256 placeholders'
+    'Warning: packaging/homebrew/playhouse.rb still has REPLACE_ON_RELEASE sha256 placeholders',
   );
 }
 

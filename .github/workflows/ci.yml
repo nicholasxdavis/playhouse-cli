@@ -23,8 +23,10 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
+      - name: Install script tooling
+        run: npm ci --prefix scripts
       - name: Cargo.toml npm version sync
-        run: node scripts/check-version-sync.js
+        run: npm run check-version-sync --prefix scripts
 
   rust:
     needs: version-sync
@@ -146,12 +148,14 @@ jobs:
         shell: bash
         env:
           PH_BIN: ${{ matrix.bin }}
+        working-directory: tests/fixtures/rust-app
         run: '"$PH_BIN" install --minimal --json'
 
-      - name: Verify Rust workspace
+      - name: Verify fixture workspace
         shell: bash
         env:
           PH_BIN: ${{ matrix.bin }}
+        working-directory: tests/fixtures/rust-app
         run: '"$PH_BIN" verify --json'
 
       - name: Functional fixture smoke

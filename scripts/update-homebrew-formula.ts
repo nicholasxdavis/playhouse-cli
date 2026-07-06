@@ -1,14 +1,18 @@
 #!/usr/bin/env node
-'use strict';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
-
-const root = path.resolve(__dirname, '..');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const artifactsDir = process.argv[2]
   ? path.resolve(process.argv[2])
   : path.join(root, 'artifacts');
+
+interface PlatformSpec {
+  target: string;
+  asset: string;
+}
 
 const cargoToml = fs.readFileSync(path.join(root, 'Cargo.toml'), 'utf8');
 const versionMatch = cargoToml.match(/^version\s*=\s*"([^"]+)"/m);
@@ -16,56 +20,45 @@ if (!versionMatch) {
   console.error('Could not read version from Cargo.toml');
   process.exit(1);
 }
+
 const version = versionMatch[1];
 const tag = `v${version}`;
 
-const specs = [
+const specs: PlatformSpec[] = [
   {
-    onArm: true,
-    onIntel: false,
-    onMacos: true,
     target: 'aarch64-apple-darwin',
     asset: `playhouse-${version}-aarch64-apple-darwin.tar.gz`,
   },
   {
-    onArm: false,
-    onIntel: true,
-    onMacos: true,
     target: 'x86_64-apple-darwin',
     asset: `playhouse-${version}-x86_64-apple-darwin.tar.gz`,
   },
   {
-    onArm: true,
-    onIntel: false,
-    onMacos: false,
     target: 'aarch64-unknown-linux-gnu',
     asset: `playhouse-${version}-aarch64-unknown-linux-gnu.tar.gz`,
   },
   {
-    onArm: false,
-    onIntel: true,
-    onMacos: false,
     target: 'x86_64-unknown-linux-gnu',
     asset: `playhouse-${version}-x86_64-unknown-linux-gnu.tar.gz`,
   },
 ];
 
-function sha256(filePath) {
+function sha256(filePath: string): string {
   const data = fs.readFileSync(filePath);
   return crypto.createHash('sha256').update(data).digest('hex');
 }
 
-function findAsset(name) {
+function findAsset(name: string): string | null {
   const direct = path.join(artifactsDir, name);
   if (fs.existsSync(direct)) return direct;
   for (const entry of fs.readdirSync(artifactsDir, { withFileTypes: true })) {
-    const p = path.join(artifactsDir, entry.name, name);
-    if (fs.existsSync(p)) return p;
+    const nested = path.join(artifactsDir, entry.name, name);
+    if (fs.existsSync(nested)) return nested;
   }
   return null;
 }
 
-const hashes = {};
+const hashes: Record<string, string> = {};
 for (const spec of specs) {
   const file = findAsset(spec.asset);
   if (!file) {
@@ -79,7 +72,7 @@ for (const spec of specs) {
 const formulaPath = path.join(root, 'packaging/homebrew/playhouse.rb');
 const formula = `# frozen_string_literal: true
 
-# Auto-updated by release workflow (scripts/update-homebrew-formula.js).
+# Auto-updated by release workflow (scripts/update-homebrew-formula.ts).
 # Usage: brew install ./packaging/homebrew/playhouse.rb
 
 class Playhouse < Formula

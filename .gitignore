@@ -3,6 +3,8 @@
 .playhouse/*
 !.playhouse/AGENT.json
 !.playhouse/BRIEF.md
+scripts/node_modules/
+artifacts/
 packages/playhouse/vendor/
 packages/playhouse/.playhouse/
 tests/**/.playhouse
