@@ -1,29 +1,19 @@
 <p align="center">
-  <img src="https://github.com/nicholasxdavis/playhouse-cli/raw/main/demo/icon/playhouse-logo.png" alt="Playhouse" width="550">
+  <img src="https://github.com/nicholasxdavis/playhouse-cli/raw/main/demo/icon/playhouse-logo.png" alt="Playhouse" width="360">
 </p>
+
 <p align="center">
-   <a href="demo/README.es.md">Español</a> •
-   <a href="demo/README.fr.md">Français</a> •
-   <a href="demo/README.de.md">Deutsch</a> •
-   <a href="demo/README.it.md">Italiano</a> •
-   <a href="demo/README.pt.md">Português</a> •
-   <a href="demo/README.ru.md">Русский</a> •
-   <a href="demo/README.zh.md">中文</a> •
-   <a href="demo/README.ja.md">日本語</a> •
-   <a href="demo/README.ko.md">한국어</a>
-</p>
-<p align="center">
-  <a href="https://github.com/openclaw/openclaw/actions/workflows/ci.yml?branch=main">
-    <img src="https://img.shields.io/github/actions/workflow/status/openclaw/openclaw/ci.yml?branch=main&style=for-the-badge&label=CI&color=%232bba68" alt="CI Status">
+  <a href="https://github.com/nicholasxdavis/playhouse-cli/actions/workflows/ci.yml?branch=main">
+    <img src="https://img.shields.io/github/actions/workflow/status/nicholasxdavis/playhouse-cli/ci.yml?branch=main&style=for-the-badge&label=CI&color=2bba68" alt="CI Status">
   </a>
-  <a href="https://www.npmjs.com/package/playhouse-cli">
-    <img src="https://img.shields.io/npm/v/playhouse-cli?style=for-the-badge&label=Package&color=%2314949c" alt="Package Version">
+  <a href="https://www.npmjs.com/package/@playhouse/cli">
+    <img src="https://img.shields.io/npm/v/@playhouse/cli?style=for-the-badge&label=Version&color=14949c" alt="npm version">
+  </a>
+  <a href="https://github.com/nicholasxdavis/playhouse-cli/releases/tag/v0.1.0">
+    <img src="https://img.shields.io/github/v/release/nicholasxdavis/playhouse-cli?style=for-the-badge&label=Release&color=14949c" alt="GitHub Release">
   </a>
   <a href="https://github.com/nicholasxdavis/playhouse-cli">
-    <img src="https://img.shields.io/github/stars/nicholasxdavis/playhouse-cli?style=for-the-badge&label=Stars&color=%232bba68" alt="GitHub Stars">
-  </a>
-  <a href="https://github.com/nicholasxdavis/playhouse-cli/commits/main">
-    <img src="https://img.shields.io/github/last-commit/nicholasxdavis/playhouse-cli?style=for-the-badge&label=Last%20Commit&color=%2314949c" alt="Last Commit">
+    <img src="https://img.shields.io/github/stars/nicholasxdavis/playhouse-cli?style=for-the-badge&label=Stars&color=2bba68" alt="GitHub Stars">
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-2bba68.svg?style=for-the-badge" alt="MIT License">
@@ -36,24 +26,31 @@
 </p>
 
 > **If you are an LLM or coding agent, stop reading this file.**  
-> Go to **[AGENTS.md](AGENTS.md)** it has the full command reference, workflows, exit codes, config keys, and everything you need to operate Playhouse correctly.
+> Go to **[AGENTS.md](AGENTS.md)** for the full command reference, workflows, exit codes, and config keys.
 
 ## Install
 
+**Recommended (Node 18+, no Rust required):**
+
 ```bash
-npm install -g playhouse
+npm install -g @playhouse/cli
 playhouse install --full   # Trivy, Arkenar, Playwright, Lighthouse, chromium
 playhouse init             # set up .playhouse/ and agent skill
 ```
 
-Also works as a dev dependency: `pnpm add -D playhouse` then `npx playhouse doctor`.
+Dev dependency:
+
+```bash
+pnpm add -D @playhouse/cli
+npx playhouse doctor
+```
 
 | Profile | Command | Installs |
 |---------|---------|----------|
 | Full (default) | `playhouse install` or `--full` | Trivy, Arkenar, Playwright, Lighthouse, chromium |
 | Minimal | `playhouse install --minimal` | Trivy + Arkenar only |
 
-Optional project hook (after `playhouse` is a devDependency):
+Optional project hook:
 
 ```json
 "scripts": {
@@ -65,26 +62,32 @@ Set `PLAYHOUSE_INSTALL_STRICT=1` to fail `npm install` when tool install fails.
 
 | Method | Command |
 |--------|---------|
-| npm (primary) | `npm i -g playhouse` |
-| npx | `npx playhouse@latest init` |
+| npm (primary) | `npm i -g @playhouse/cli` |
+| npx | `npx @playhouse/cli init` |
+| GitHub Release | [v0.1.0 binaries](https://github.com/nicholasxdavis/playhouse-cli/releases/tag/v0.1.0) |
 | cargo (developers) | `cargo install --path . --force` |
-| manual binary | set `PLAYHOUSE_BIN` / `PLAYHOUSE_SKIP_DOWNLOAD=1` |
+| manual binary | set `PLAYHOUSE_BIN` or `PLAYHOUSE_SKIP_DOWNLOAD=1` |
 
-Requires **Node.js 18+** for Playwright and Lighthouse. The Playhouse CLI itself is a native binary (~12 MB) downloaded on `npm install`.
+The npm package downloads the native binary (~12 MB) from GitHub Releases on `postinstall`. Current release: **v0.1.0**.
 
-**From source (Rust):**
+**From source:**
 
 ```bash
+git clone https://github.com/nicholasxdavis/playhouse-cli.git
+cd playhouse-cli
 cargo build --release
-# or
 cargo install --path . --force
 ```
 
-Local npm dev loop: `cargo build --release && cd packages/playhouse && npm run link-local`
+Local npm dev loop:
 
-**CI:** GitHub Actions runs on [ubuntu, macOS, Windows](https://github.com/nicholasxdavis/playhouse-cli/actions) — `cargo test`, npm smoke, and `playhouse verify` on each OS.
+```bash
+cargo build --release && cd packages/playhouse && npm run link-local
+```
 
-**Releases:** tag `v0.1.0` (match `Cargo.toml` / `packages/playhouse/package.json`) to publish GitHub Release assets for npm postinstall.
+**CI:** [GitHub Actions](https://github.com/nicholasxdavis/playhouse-cli/actions) runs `cargo test`, npm smoke, and `playhouse verify` on Ubuntu, macOS, and Windows.
+
+**Releases:** push tag `v0.1.0` (must match `Cargo.toml` and `packages/playhouse/package.json`) to publish binaries for npm postinstall.
 
 ## Quick start
 
@@ -93,28 +96,32 @@ playhouse                    # TUI (humans)
 playhouse doctor             # check tools
 playhouse verify --json      # full QA suite + 0-100 star rating
 playhouse agent --json       # agent manifest (read first)
+playhouse upgrade --json     # check GitHub + npm for updates
 ```
 
-**Browser audits (Lighthouse, Arkenar)** need a URL. Set the workspace default once:
+**Browser audits (Lighthouse, Arkenar)** need a URL:
 
 ```bash
 playhouse config set default_url http://localhost:3000
 ```
 
-Playhouse also probes port hints from `package.json` / Vite / Wrangler config, then common dev ports.
+Playhouse also reads port hints from `package.json`, Vite, and Wrangler config, then probes common dev ports.
 
-**Monorepos:** set `scan_root` and `test_root` in `.playhouse/config.json` (or via `playhouse config set scan_root apps/web`).
+**Monorepos:**
+
+```bash
+playhouse config set scan_root apps/web
+playhouse config set test_root apps/web
+```
 
 ## For agents
 
-Read **[AGENTS.md](AGENTS.md)** first. In consumer projects, `playhouse init` installs **`.playhouse/SKILL.md`** and other workspace files.
+Read **[AGENTS.md](AGENTS.md)** first. `playhouse init` installs **`.playhouse/SKILL.md`** and other workspace files.
 
 ```bash
-playhouse skill install      # install or refresh .playhouse/SKILL.md
+playhouse skill install
 playhouse skill status --json
 ```
-
-Enabled by default. Disable with `playhouse skill disable` or config.
 
 ## Commands
 
@@ -124,7 +131,8 @@ Enabled by default. Disable with `playhouse skill disable` or config.
 | `playhouse agent status` | Quick health + next actions |
 | `playhouse agent plan` | Phased workflow |
 | `playhouse agent handoff` | Verify + export handoff bundle |
-| `playhouse verify` | Trivy + Playwright + Arkenar + Lighthouse |
+| `playhouse verify` | Trivy + functional + Arkenar + Lighthouse |
+| `playhouse test list\|init\|run` | Test baseplates |
 | `playhouse score` | Playhouse Stars (0-100) |
 | `playhouse doctor` | Tool health |
 | `playhouse install` | Auto-install bundled tools |
@@ -143,20 +151,16 @@ Combined 0-100 audit score after verify. Report at `.playhouse/reports/score.jso
 ```
 your-project/
   .playhouse/
-    SKILL.md              # agent skill (recommended)
-    BRIEF.md              # workspace QA brief
-    AGENT.json            # handoff bundle
-    config.json           # workspace config
-    stay-on-track/        # optional discipline skill
-      SKILL.md
-      PROJECT.md
-    reports/
-      score.json
+    SKILL.md
+    BRIEF.md
+    AGENT.json
+    config.json
+    reports/score.json
 ```
 
 ## Package managers
 
-Playwright and Lighthouse use npm, pnpm, yarn, or bun. Auto-detected from lockfiles or set via:
+Playwright and Lighthouse use npm, pnpm, yarn, or bun:
 
 ```bash
 playhouse config set package_manager pnpm
@@ -173,6 +177,15 @@ playhouse config set package_manager pnpm
 | 4 | Trivy findings |
 | 5 | Tool missing |
 
+## Links
+
+| Resource | URL |
+|----------|-----|
+| Repository | https://github.com/nicholasxdavis/playhouse-cli |
+| Release v0.1.0 | https://github.com/nicholasxdavis/playhouse-cli/releases/tag/v0.1.0 |
+| npm package | https://www.npmjs.com/package/@playhouse/cli |
+| Issues | https://github.com/nicholasxdavis/playhouse-cli/issues |
+
 ## License
 
-MIT - see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).

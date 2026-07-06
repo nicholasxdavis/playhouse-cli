@@ -46,7 +46,7 @@ pub fn check() -> UpgradeReport {
         github,
         npm,
         upgrade: UpgradeHints {
-            npm: "npm install -g playhouse@latest".into(),
+            npm: "npm install -g @playhouse/cli@latest".into(),
             cargo: "cargo install playhouse --force".into(),
             releases,
         },
@@ -101,7 +101,7 @@ fn fetch_github_latest(repo: &str, current: &str) -> RemoteVersion {
 }
 
 fn fetch_npm_latest(current: &str) -> RemoteVersion {
-    let url = "https://registry.npmjs.org/playhouse/latest";
+    let url = "https://registry.npmjs.org/@playhouse%2Fcli/latest";
     match http_get(url) {
         Ok(body) => {
             let latest = serde_json::from_str::<Value>(&body)
@@ -113,14 +113,14 @@ fn fetch_npm_latest(current: &str) -> RemoteVersion {
                     .map(|l| version_gt(l, current))
                     .unwrap_or(false),
                 latest,
-                url: "https://www.npmjs.com/package/playhouse".into(),
+                url: "https://www.npmjs.com/package/@playhouse/cli".into(),
                 error: None,
             }
         }
         Err(e) => RemoteVersion {
             latest: None,
             update_available: false,
-            url: "https://www.npmjs.com/package/playhouse".into(),
+            url: "https://www.npmjs.com/package/@playhouse/cli".into(),
             error: Some(e),
         },
     }

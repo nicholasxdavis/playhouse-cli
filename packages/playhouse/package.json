@@ -1,8 +1,11 @@
 {
-  "name": "playhouse",
+  "name": "@playhouse/cli",
   "version": "0.1.0",
   "description": "Local QA CLI — security, functional, performance, agent handoff",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/nicholasxdavis/playhouse-cli.git",
