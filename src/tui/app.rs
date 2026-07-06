@@ -20,7 +20,7 @@ pub fn default_slash_commands() -> Vec<SlashCommand> {
         ("/doctor", "Tool health (/doctor resolve rebuilds native deps)"),
         ("/install", "Install bundled tools (Trivy, Arkenar, Playwright)"),
         ("/init", "Initialize .playhouse/ (--no-skill, --stay-on-track)"),
-        ("/verify", "Full QA suite (optional URL: /verify http://localhost:3000)"),
+        ("/verify", "Full QA (/verify [url] --test pat --start-server cmd)"),
         ("/score", "Star audit (/score last = saved; /score [url] = audit only)"),
         ("/functional", "Run detected functional test runner"),
         ("/lighthouse", "Performance & accessibility audit"),
@@ -69,6 +69,24 @@ pub enum AppMode {
     ConfigMenu,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct VerifyParams {
+    pub url: Option<String>,
+    pub test_pattern: Option<String>,
+    pub start_server: Option<String>,
+    pub server_port: Option<u16>,
+    pub server_timeout: u64,
+}
+
+impl VerifyParams {
+    pub fn new() -> Self {
+        Self {
+            server_timeout: 120,
+            ..Default::default()
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum TaskKind {
     Doctor { resolve: bool },
@@ -77,14 +95,14 @@ pub enum TaskKind {
         stay_on_track: bool,
         no_skill: bool,
     },
-    Verify { url: Option<String> },
+    Verify { params: VerifyParams },
     Score { url: Option<String> },
     Lighthouse { url: String },
     Playwright { pattern: Option<String> },
     Functional { pattern: Option<String> },
     Trivy,
     Arkenar { url: String },
-    Handoff { url: Option<String> },
+    Handoff { params: VerifyParams },
 }
 
 pub struct App {
@@ -138,7 +156,7 @@ impl App {
         let settings = config::load_settings();
         config::apply_theme_from_settings(&settings);
         let local_server = detect::find_local_server(workspace);
-        let config_options = config::config_options_for_tab(0, &settings);
+        let config_options = config::config_options_for_tab(0, workspace, &settings);
 
         let mut app = Self {
             running: true,
@@ -310,11 +328,13 @@ impl App {
     pub fn save_settings(&mut self) {
         self.settings.last_workspace = Some(self.workspace.clone());
         config::save_settings(&self.settings);
-        self.config_options = config::config_options_for_tab(self.config_tab, &self.settings);
+        self.config_options =
+            config::config_options_for_tab(self.config_tab, &self.workspace, &self.settings);
     }
 
     pub fn refresh_config_options(&mut self) {
-        self.config_options = config::config_options_for_tab(self.config_tab, &self.settings);
+        self.config_options =
+            config::config_options_for_tab(self.config_tab, &self.workspace, &self.settings);
         if self.config_selected >= self.config_options.len() {
             self.config_selected = self.config_options.len().saturating_sub(1);
         }
@@ -520,13 +540,11 @@ impl App {
             MouseEventKind::Drag(MouseButton::Left) if self.feed_scroll_dragging => {
                 self.set_scroll_from_track_row(event.row);
             }
-            MouseEventKind::Up(MouseButton::Left) => {
-                if self.feed_scroll_dragging {
-                    self.feed_scroll_dragging = false;
-                    if self.feed_scroll_pos >= max as f32 - 0.5 {
-                        self.feed_stick_bottom = true;
-                        self.feed_scroll_target = max as f32;
-                    }
+            MouseEventKind::Up(MouseButton::Left) if self.feed_scroll_dragging => {
+                self.feed_scroll_dragging = false;
+                if self.feed_scroll_pos >= max as f32 - 0.5 {
+                    self.feed_stick_bottom = true;
+                    self.feed_scroll_target = max as f32;
                 }
             }
             _ => {}

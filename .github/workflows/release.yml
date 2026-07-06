@@ -112,6 +112,38 @@ jobs:
           if-no-files-found: error
           compression-level: 6
 
+  homebrew:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+
+      - name: Update Homebrew formula sha256
+        run: node scripts/update-homebrew-formula.js artifacts
+
+      - name: Commit formula update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packaging/homebrew/playhouse.rb
+          if git diff --staged --quiet; then
+            echo "No formula changes"
+            exit 0
+          fi
+          git commit -m "chore: update Homebrew formula for ${GITHUB_REF_NAME} [skip ci]"
+          git push
+
   release:
     needs: build
     runs-on: ubuntu-latest

@@ -9,27 +9,27 @@
 class Playhouse < Formula
   desc 'QA CLI for security, functional testing, performance audits, and agent handoff'
   homepage 'https://github.com/nicholasxdavis/playhouse-cli'
-  version '0.3.1'
+  version '0.3.2'
   license 'MIT'
 
   on_macos do
     on_arm do
-      url 'https://github.com/nicholasxdavis/playhouse-cli/releases/download/v0.3.1/playhouse-0.3.1-aarch64-apple-darwin.tar.gz'
+      url 'https://github.com/nicholasxdavis/playhouse-cli/releases/download/v0.3.2/playhouse-0.3.2-aarch64-apple-darwin.tar.gz'
       sha256 'REPLACE_ON_RELEASE'
     end
     on_intel do
-      url 'https://github.com/nicholasxdavis/playhouse-cli/releases/download/v0.3.1/playhouse-0.3.1-x86_64-apple-darwin.tar.gz'
+      url 'https://github.com/nicholasxdavis/playhouse-cli/releases/download/v0.3.2/playhouse-0.3.2-x86_64-apple-darwin.tar.gz'
       sha256 'REPLACE_ON_RELEASE'
     end
   end
 
   on_linux do
     on_arm do
-      url 'https://github.com/nicholasxdavis/playhouse-cli/releases/download/v0.3.1/playhouse-0.3.1-aarch64-unknown-linux-gnu.tar.gz'
+      url 'https://github.com/nicholasxdavis/playhouse-cli/releases/download/v0.3.2/playhouse-0.3.2-aarch64-unknown-linux-gnu.tar.gz'
       sha256 'REPLACE_ON_RELEASE'
     end
     on_intel do
-      url 'https://github.com/nicholasxdavis/playhouse-cli/releases/download/v0.3.1/playhouse-0.3.1-x86_64-unknown-linux-gnu.tar.gz'
+      url 'https://github.com/nicholasxdavis/playhouse-cli/releases/download/v0.3.2/playhouse-0.3.2-x86_64-unknown-linux-gnu.tar.gz'
       sha256 'REPLACE_ON_RELEASE'
     end
   end

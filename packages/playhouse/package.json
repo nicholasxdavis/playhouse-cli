@@ -1,6 +1,6 @@
 {
   "name": "@nicholasxdavis/playhouse-cli",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Local QA CLI — security, functional, performance, agent handoff",
   "license": "MIT",
   "publishConfig": {

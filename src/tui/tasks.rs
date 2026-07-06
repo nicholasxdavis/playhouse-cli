@@ -6,10 +6,11 @@ use crate::agent;
 use crate::audit::{self, AuditProgress};
 use crate::config::load_settings;
 use crate::detect;
+use crate::dev_server;
 use crate::install;
 use crate::project;
 use crate::score::PlayhouseScore;
-use crate::tui::app::TaskKind;
+use crate::tui::app::{TaskKind, VerifyParams};
 use crate::tui::ui_blocks::{ContentBlock, TodoItem, TodoStatus};
 use crate::types::CheckStatus;
 use crate::workspace;
@@ -54,8 +55,8 @@ pub fn spawn_task(
                 let r = run_init(&workspace_path, stay_on_track, no_skill, tx.clone()).await;
                 (r.0, r.1, r.2, None)
             }
-            TaskKind::Verify { url } => {
-                let r = run_verify_task(&workspace_path, url, tx.clone()).await;
+            TaskKind::Verify { params } => {
+                let r = run_verify_task(&workspace_path, &params, tx.clone()).await;
                 (r.0, r.1, r.2, None)
             }
             TaskKind::Score { url } => {
@@ -82,8 +83,8 @@ pub fn spawn_task(
                 let r = run_arkenar(&workspace_path, &url, tx.clone()).await;
                 (r.0, r.1, r.2, None)
             }
-            TaskKind::Handoff { url } => {
-                let r = run_handoff_task(&workspace_path, url, tx.clone()).await;
+            TaskKind::Handoff { params } => {
+                let r = run_handoff_task(&workspace_path, &params, tx.clone()).await;
                 (r.0, r.1, r.2, None)
             }
         };
@@ -215,18 +216,53 @@ impl VerifyTracker {
 
 async fn run_verify_task(
     workspace: &str,
-    url_override: Option<String>,
+    params: &VerifyParams,
     tx: mpsc::UnboundedSender<TaskEvent>,
 ) -> (Vec<ContentBlock>, bool, String, audit::AuditReport) {
     let settings = load_settings();
-    let url = url_override.or_else(|| workspace::resolve_verify_url(workspace, &settings));
+    let mut resolved = params.url.clone();
+    let mut server_guard = None;
+
+    if let Some(ref start_cmd) = params.start_server {
+        send_progress(
+            &tx,
+            "Starting dev server…",
+            vec![ContentBlock::tool_running("Dev server", start_cmd.as_str())],
+        );
+        let ws_cfg = workspace::load_workspace_config(workspace);
+        let url_hint = resolved.as_deref().or(ws_cfg.default_url.as_deref());
+        let port = dev_server::resolve_server_port(params.server_port, url_hint, workspace);
+        let cwd = workspace::scan_root(workspace);
+        match dev_server::spawn_and_wait(&cwd, start_cmd, port, params.server_timeout).await {
+            Ok((guard, server_url)) => {
+                resolved = Some(server_url);
+                server_guard = Some(guard);
+            }
+            Err(e) => {
+                let summary = format!("Dev server failed: {e}");
+                return (
+                    vec![ContentBlock::tool_done("Dev server", &summary, false, None)],
+                    false,
+                    summary,
+                    audit::run_audit(workspace, None, &settings, true, None).await,
+                );
+            }
+        }
+    }
+
+    if resolved.is_none() {
+        resolved = workspace::resolve_verify_url(workspace, &settings);
+    }
+
+    let test_pattern = params.test_pattern.as_deref();
     let mut tracker = VerifyTracker::new();
     send_progress(&tx, "Verify · QA Suite", tracker.blocks());
 
     let (progress_tx, mut progress_rx) = mpsc::unbounded_channel::<AuditProgress>();
     let ws = workspace.to_string();
-    let url_clone = url.clone();
+    let url_clone = resolved.clone();
     let settings_clone = settings.clone();
+    let pattern = params.test_pattern.clone();
 
     let audit_handle = tokio::spawn(async move {
         audit::run_audit_with_progress(
@@ -234,7 +270,7 @@ async fn run_verify_task(
             url_clone.as_deref(),
             &settings_clone,
             true,
-            None,
+            pattern.as_deref(),
             Some(move |event| {
                 let _ = progress_tx.send(event);
             }),
@@ -265,6 +301,7 @@ async fn run_verify_task(
         }
     }
 
+    drop(server_guard);
     let report = audit_handle.await.unwrap();
     tracker.finish();
 
@@ -279,7 +316,7 @@ async fn run_verify_task(
         )
     };
 
-    let blocks = vec![
+    let mut blocks = vec![
         ContentBlock::todo_list("Verify · QA Suite", tracker.items),
         ContentBlock::score_report(
             PlayhouseScore {
@@ -295,6 +332,12 @@ async fn run_verify_task(
             report.engines.clone(),
         ),
     ];
+    if test_pattern.is_some() {
+        blocks.push(ContentBlock::text(format!(
+            "Functional filter: {}",
+            params.test_pattern.as_deref().unwrap_or("")
+        )));
+    }
 
     (blocks, success, summary, report)
 }
@@ -340,11 +383,11 @@ async fn run_score_task(
 
 async fn run_handoff_task(
     workspace: &str,
-    url_override: Option<String>,
+    params: &VerifyParams,
     tx: mpsc::UnboundedSender<TaskEvent>,
 ) -> (Vec<ContentBlock>, bool, String) {
     let (mut blocks, success, summary, report) =
-        run_verify_task(workspace, url_override, tx.clone()).await;
+        run_verify_task(workspace, params, tx.clone()).await;
     let settings = load_settings();
     let ws = workspace::load_workspace_config(workspace);
     let brief = agent::build_brief_text(workspace, &settings, &ws);

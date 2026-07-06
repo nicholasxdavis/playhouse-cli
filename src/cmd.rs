@@ -82,8 +82,10 @@ fn is_direct_executable(program: &str) -> bool {
         return false;
     }
     #[cfg(windows)]
-    if needs_cmd_wrapper(path) {
-        return false;
+    {
+        if needs_cmd_wrapper(path) {
+            return false;
+        }
     }
     true
 }
@@ -93,11 +95,6 @@ fn needs_cmd_wrapper(path: &Path) -> bool {
     path.extension()
         .and_then(|e| e.to_str())
         .is_some_and(|ext| ext.eq_ignore_ascii_case("bat") || ext.eq_ignore_ascii_case("cmd"))
-}
-
-#[cfg(not(windows))]
-fn needs_cmd_wrapper(_path: &Path) -> bool {
-    false
 }
 
 #[cfg(windows)]

@@ -53,21 +53,17 @@ async fn probe_url_async(url: &str) -> bool {
 }
 
 fn terminate_child(child: &mut tokio::process::Child) {
+    #[cfg(windows)]
     if let Some(pid) = child.id() {
-        #[cfg(windows)]
-        {
-            let _ = std::process::Command::new("taskkill")
-                .args(["/T", "/F", "/PID", &pid.to_string()])
-                .stdin(std::process::Stdio::null())
-                .stdout(std::process::Stdio::null())
-                .stderr(std::process::Stdio::null())
-                .status();
-        }
-        #[cfg(not(windows))]
-        {
-            let _ = child.start_kill();
-        }
-    } else {
+        let _ = std::process::Command::new("taskkill")
+            .args(["/T", "/F", "/PID", &pid.to_string()])
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status();
+    }
+    #[cfg(not(windows))]
+    {
         let _ = child.start_kill();
     }
     let _ = child.try_wait();

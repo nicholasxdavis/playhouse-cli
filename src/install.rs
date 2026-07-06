@@ -356,7 +356,7 @@ fn arkenar_download_spec() -> Result<(String, String, ArchiveKind), String> {
     {
         Ok((
             format!("{base}/arkenar-linux-amd64.tar.gz"),
-            format!("arkenar-linux-amd64.tar.gz"),
+            "arkenar-linux-amd64.tar.gz".to_string(),
             ArchiveKind::TarGz,
         ))
     }
@@ -410,6 +410,7 @@ fn playhouse_home_cache() -> std::path::PathBuf {
 
 #[derive(Clone, Copy)]
 enum ArchiveKind {
+    #[allow(dead_code)]
     Zip,
     #[allow(dead_code)]
     TarGz,

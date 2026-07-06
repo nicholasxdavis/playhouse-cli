@@ -185,17 +185,6 @@ fn normalize_playwright(m: &Value, runner: FunctionalRunner) -> Value {
     out
 }
 
-#[cfg(test)]
-mod headless_tests {
-    use super::*;
-
-    #[test]
-    fn headless_env_includes_ci() {
-        assert!(HEADLESS_ENV.iter().any(|(k, v)| *k == "CI" && *v == "true"));
-        assert!(HEADLESS_ENV.iter().any(|(k, _)| *k == "WATCH"));
-    }
-}
-
 fn fix_hint(runner: &str) -> String {
     match runner {
         "playwright" => "playhouse install --full".into(),
@@ -235,5 +224,16 @@ fn print_human(metrics: &Value, code: i32) {
         println!("[*] All tests passed");
     } else {
         println!("[x] Test failures detected");
+    }
+}
+
+#[cfg(test)]
+mod headless_tests {
+    use super::*;
+
+    #[test]
+    fn headless_env_includes_ci() {
+        assert!(HEADLESS_ENV.iter().any(|(k, v)| *k == "CI" && *v == "true"));
+        assert!(HEADLESS_ENV.iter().any(|(k, _)| *k == "WATCH"));
     }
 }

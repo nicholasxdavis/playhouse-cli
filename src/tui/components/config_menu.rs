@@ -96,6 +96,8 @@ pub fn render(f: &mut Frame, area: Rect, app: &App) {
             Span::styled(" toggle · ", theme::text_dim()),
             Span::styled("←/→", theme::accent()),
             Span::styled(" tab · ", theme::text_dim()),
+            Span::styled("/config set", theme::accent()),
+            Span::styled(" · ", theme::text_dim()),
             Span::styled("Esc", theme::accent()),
             Span::styled(" close", theme::text_dim()),
         ])),

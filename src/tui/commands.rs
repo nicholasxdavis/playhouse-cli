@@ -1,8 +1,9 @@
 use tokio::sync::mpsc;
 
 use crate::agent;
+use crate::config_cli;
 use crate::score;
-use crate::tui::app::{App, AppMode, FeedRole, TaskKind};
+use crate::tui::app::{App, AppMode, FeedRole, TaskKind, VerifyParams};
 use crate::tui::config;
 use crate::tui::tasks::{spawn_task, TaskEvent};
 use crate::tui::ui_blocks::ContentBlock;
@@ -52,7 +53,7 @@ pub fn execute_command(app: &mut App, command: &str, task_tx: &mpsc::UnboundedSe
             app,
             task_tx,
             TaskKind::Verify {
-                url: optional_http_url(&parts, 1),
+                params: parse_verify_flags(&parts),
             },
         ),
         "/score" => {
@@ -115,7 +116,7 @@ pub fn execute_command(app: &mut App, command: &str, task_tx: &mpsc::UnboundedSe
                 app,
                 task_tx,
                 TaskKind::Handoff {
-                    url: optional_http_url(&parts, 2).or_else(|| optional_http_url(&parts, 1)),
+                    params: parse_verify_flags(&parts),
                 },
             ),
             _ => push_json(app, &agent::manifest(&app.workspace)),
@@ -196,12 +197,31 @@ pub fn execute_command(app: &mut App, command: &str, task_tx: &mpsc::UnboundedSe
             Ok(path) => app.push_system(&format!("Exported workspace brief to {}", path.display())),
             Err(e) => app.push_system(&format!("Export failed: {e}")),
         },
-        "/config" | "/settings" => {
-            app.mode = AppMode::ConfigMenu;
-            app.config_tab = 0;
-            app.config_selected = 0;
-            app.refresh_config_options();
-        }
+        "/config" | "/settings" => match parts.get(1).map(|s| s.to_lowercase()).as_deref() {
+            Some("schema") => push_json(app, &config_cli::schema_json()),
+            Some("get") if parts.len() >= 3 => match config_cli::get(&app.workspace, parts[2]) {
+                Ok(v) => push_json(app, &v),
+                Err(e) => app.push_system(&format!("Config get failed: {e}")),
+            },
+            Some("set") if parts.len() >= 4 => {
+                let value = parts[3..].join(" ");
+                match config_cli::set(&app.workspace, parts[2], &value) {
+                    Ok(v) => {
+                        push_json(app, &v);
+                        app.invalidate_brief();
+                        app.refresh_local_server();
+                        app.refresh_config_options();
+                    }
+                    Err(e) => app.push_system(&format!("Config set failed: {e}")),
+                }
+            }
+            _ => {
+                app.mode = AppMode::ConfigMenu;
+                app.config_tab = 0;
+                app.config_selected = 0;
+                app.refresh_config_options();
+            }
+        },
         "/help" => {
             app.mode = AppMode::HelpMenu;
             app.help_tab = 0;
@@ -217,6 +237,40 @@ pub fn execute_command(app: &mut App, command: &str, task_tx: &mpsc::UnboundedSe
         "/quit" | "/exit" => app.running = false,
         other => app.push_system(&format!("Unknown command: {other}. Type /help")),
     }
+}
+
+fn parse_verify_flags(parts: &[&str]) -> VerifyParams {
+    let mut p = VerifyParams::new();
+    let mut i = 1usize;
+    if parts.len() > 1 && parts[1].eq_ignore_ascii_case("handoff") {
+        i = 2;
+    }
+    while i < parts.len() {
+        match parts[i] {
+            "--test" if i + 1 < parts.len() => {
+                p.test_pattern = Some(parts[i + 1].to_string());
+                i += 2;
+            }
+            "--start-server" if i + 1 < parts.len() => {
+                p.start_server = Some(parts[i + 1].to_string());
+                i += 2;
+            }
+            "--port" | "--server-port" if i + 1 < parts.len() => {
+                p.server_port = parts[i + 1].parse().ok();
+                i += 2;
+            }
+            "--server-timeout" if i + 1 < parts.len() => {
+                p.server_timeout = parts[i + 1].parse().unwrap_or(120);
+                i += 2;
+            }
+            s if s.starts_with("http://") || s.starts_with("https://") => {
+                p.url = Some(s.to_string());
+                i += 1;
+            }
+            _ => i += 1,
+        }
+    }
+    p
 }
 
 fn optional_http_url(parts: &[&str], from: usize) -> Option<String> {
@@ -272,18 +326,26 @@ pub fn slash_label(kind: &TaskKind) -> String {
         }
         TaskKind::Install => "/install".into(),
         TaskKind::Init { .. } => "/init".into(),
-        TaskKind::Verify { url } => url
-            .as_ref()
-            .map(|u| format!("/verify {u}"))
-            .unwrap_or_else(|| "/verify".into()),
+        TaskKind::Verify { params } => {
+            if let Some(u) = &params.url {
+                format!("/verify {u}")
+            } else if params.start_server.is_some() || params.test_pattern.is_some() {
+                "/verify (with options)".into()
+            } else {
+                "/verify".into()
+            }
+        }
         TaskKind::Score { url } => url
             .as_ref()
             .map(|u| format!("/score {u}"))
             .unwrap_or_else(|| "/score".into()),
-        TaskKind::Handoff { url } => url
-            .as_ref()
-            .map(|u| format!("/agent handoff {u}"))
-            .unwrap_or_else(|| "/agent handoff".into()),
+        TaskKind::Handoff { params } => {
+            if let Some(u) = &params.url {
+                format!("/agent handoff {u}")
+            } else {
+                "/agent handoff".into()
+            }
+        }
         TaskKind::Lighthouse { url } => format!("/lighthouse {url}"),
         TaskKind::Playwright { .. } => "/playwright".into(),
         TaskKind::Functional { .. } => "/functional".into(),
@@ -302,8 +364,16 @@ mod tests {
         assert_eq!(slash_label(&TaskKind::Doctor { resolve: true }), "/doctor resolve");
         assert_eq!(slash_label(&TaskKind::Functional { pattern: None }), "/functional");
         assert_eq!(
-            slash_label(&TaskKind::Handoff { url: None }),
+            slash_label(&TaskKind::Handoff {
+                params: VerifyParams::new()
+            }),
             "/agent handoff"
+        );
+        assert_eq!(
+            slash_label(&TaskKind::Verify {
+                params: VerifyParams::new()
+            }),
+            "/verify"
         );
         assert_eq!(slash_label(&TaskKind::Score { url: None }), "/score");
         assert_eq!(
@@ -312,5 +382,41 @@ mod tests {
             }),
             "/lighthouse http://localhost:3000"
         );
+    }
+
+    #[test]
+    fn parse_verify_flags_extracts_url_and_options() {
+        let parts: Vec<&str> = vec![
+            "/verify",
+            "http://localhost:3000",
+            "--test",
+            "login",
+            "--start-server",
+            "npm run dev",
+            "--port",
+            "3000",
+            "--server-timeout",
+            "90",
+        ];
+        let p = parse_verify_flags(&parts);
+        assert_eq!(p.url.as_deref(), Some("http://localhost:3000"));
+        assert_eq!(p.test_pattern.as_deref(), Some("login"));
+        assert_eq!(p.start_server.as_deref(), Some("npm run dev"));
+        assert_eq!(p.server_port, Some(3000));
+        assert_eq!(p.server_timeout, 90);
+    }
+
+    #[test]
+    fn parse_verify_flags_skips_handoff_prefix() {
+        let parts: Vec<&str> = vec![
+            "/agent",
+            "handoff",
+            "https://example.com",
+            "--test",
+            "smoke",
+        ];
+        let p = parse_verify_flags(&parts);
+        assert_eq!(p.url.as_deref(), Some("https://example.com"));
+        assert_eq!(p.test_pattern.as_deref(), Some("smoke"));
     }
 }

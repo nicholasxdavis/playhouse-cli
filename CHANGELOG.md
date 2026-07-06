@@ -2,6 +2,20 @@
 
 All notable changes to Playhouse CLI are documented here.
 
+## [0.3.2] — 2026-07-06
+
+### CI / quality
+- Fix all clippy `-D warnings` failures (cross-platform dead code, test module order)
+- CI clippy green on Linux/macOS/Windows
+
+### TUI
+- Workspace config tab + `/config get|set|schema` (default_url, scan_root, etc.)
+- Verify dev-server flags: `--test`, `--start-server`, `--port`, `--server-timeout`
+- Handoff inherits full verify options
+
+### Packaging
+- Homebrew formula sha256 auto-updated on release (no more REPLACE_ON_RELEASE)
+
 ## [0.3.1] — 2026-07-06
 
 ### TUI

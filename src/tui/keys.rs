@@ -192,16 +192,18 @@ pub fn handle_config_key(app: &mut App, code: KeyCode) {
             app.save_settings();
         }
         KeyCode::Left | KeyCode::BackTab => {
+            let tabs = crate::config::config_tab_labels().len();
             if app.config_tab > 0 {
                 app.config_tab -= 1;
             } else {
-                app.config_tab = 4;
+                app.config_tab = tabs - 1;
             }
             app.config_selected = 0;
             app.refresh_config_options();
         }
         KeyCode::Right | KeyCode::Tab => {
-            app.config_tab = (app.config_tab + 1) % 5;
+            let tabs = crate::config::config_tab_labels().len();
+            app.config_tab = (app.config_tab + 1) % tabs;
             app.config_selected = 0;
             app.refresh_config_options();
         }

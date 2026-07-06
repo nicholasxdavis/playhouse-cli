@@ -142,7 +142,11 @@ pub fn apply_theme_from_settings(settings: &PlayhouseSettings) {
 }
 
 /// Config rows per tab: (label, description, enabled)
-pub fn config_options_for_tab(tab: usize, settings: &PlayhouseSettings) -> Vec<(String, String, bool)> {
+pub fn config_options_for_tab(
+    tab: usize,
+    workspace: &str,
+    settings: &PlayhouseSettings,
+) -> Vec<(String, String, bool)> {
     match tab {
         0 => vec![
             (
@@ -264,12 +268,44 @@ pub fn config_options_for_tab(tab: usize, settings: &PlayhouseSettings) -> Vec<(
                 settings.stay_on_track_enabled,
             ),
         ],
+        5 => workspace_config_summary(workspace)
+            .into_iter()
+            .map(|(k, v)| (k, v, true))
+            .collect(),
         _ => vec![],
     }
 }
 
-pub fn config_tab_labels() -> [&'static str; 5] {
-    ["General", "Tools", "Agent", "Engines", "Stay-on-track"]
+pub fn workspace_config_summary(workspace: &str) -> Vec<(String, String)> {
+    let ws = crate::workspace::load_workspace_config(workspace);
+    let settings = load_settings();
+    let url = crate::workspace::resolve_verify_url(workspace, &settings);
+    vec![
+        (
+            "default_url".into(),
+            ws.default_url.unwrap_or_else(|| "(not set)".into()),
+        ),
+        (
+            "resolved verify URL".into(),
+            url.unwrap_or_else(|| "(none — start dev server or set default_url)".into()),
+        ),
+        (
+            "scan_root".into(),
+            ws.scan_root.unwrap_or_else(|| "(workspace root)".into()),
+        ),
+        (
+            "test_root".into(),
+            ws.test_root.unwrap_or_else(|| "(scan_root)".into()),
+        ),
+        (
+            "functional_runner".into(),
+            ws.functional_runner.unwrap_or_else(|| "(auto-detect)".into()),
+        ),
+    ]
+}
+
+pub fn config_tab_labels() -> [&'static str; 6] {
+    ["General", "Tools", "Agent", "Engines", "Stay-on-track", "Workspace"]
 }
 
 pub fn toggle_config_option(settings: &mut PlayhouseSettings, tab: usize, index: usize) {
