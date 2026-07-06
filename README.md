@@ -25,9 +25,13 @@
 > **If you are an LLM or coding agent, stop reading this file.**  
 > Go to **[AGENTS.md](AGENTS.md)** for the full command reference, workflows, exit codes, and config keys.
 
+<p align="center">
+  <img src="https://github.com/nicholasxdavis/playhouse-cli/blob/main/demo/icon/tui-7-6.png?raw=true" alt="Playhouse CLI Demo">
+</p>
+
 ## Install
 
-**Recommended (Node 18+, no Rust required):**
+**Recommended:**
 
 ```bash
 npm install -g @nicholasxdavis/playhouse-cli
