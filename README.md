@@ -186,13 +186,3 @@ playhouse config set package_manager pnpm
 | 3 | Arkenar findings |
 | 4 | Trivy findings |
 | 5 | Tool missing |
-
-## Links
-
-| Resource | URL |
-|----------|-----|
-| Repository | https://github.com/nicholasxdavis/playhouse-cli |
-| Release v0.1.2 | https://github.com/nicholasxdavis/playhouse-cli/releases/tag/v0.1.2 |
-| npm package | https://www.npmjs.com/package/@nicholasxdavis/playhouse-cli |
-| Issues | https://github.com/nicholasxdavis/playhouse-cli/issues |
-
