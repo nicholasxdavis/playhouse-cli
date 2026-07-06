@@ -213,6 +213,7 @@ async fn run_verify_task(
             url_clone.as_deref(),
             &settings_clone,
             true,
+            None,
             Some(move |event| {
                 let _ = progress_tx.send(event);
             }),

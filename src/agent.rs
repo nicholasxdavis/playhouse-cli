@@ -535,7 +535,7 @@ fn next_actions(
             actions.push(json!({
                 "priority": "medium",
                 "action": format!("playhouse test init --plate {plate} --json"),
-                "reason": "No functional tests detected — scaffold a starter baseplate",
+                "reason": "No functional tests detected; scaffold a starter baseplate",
             }));
         }
     }
@@ -726,7 +726,7 @@ fn commands_reference() -> Value {
         { "cmd": "playhouse init [--stay-on-track] [--json]", "desc": "Set up .playhouse/" },
         { "cmd": "playhouse install [--json]", "desc": "Install bundled tools" },
         { "cmd": "playhouse doctor [--json]", "desc": "Tool health check" },
-        { "cmd": "playhouse verify [--url URL] [--json]", "desc": "Full QA + Playhouse Stars" },
+        { "cmd": "playhouse verify [--url URL] [--test PATTERN] [--start-server CMD] [--server-port N] [--json]", "desc": "Full QA + Playhouse Stars" },
         { "cmd": "playhouse score [--url URL] [--last] [--json]", "desc": "Star rating audit" },
         { "cmd": "playhouse functional [--json]", "desc": "Run detected functional test runner" },
         { "cmd": "playhouse test list [--json]", "desc": "List scaffold baseplates for this stack" },

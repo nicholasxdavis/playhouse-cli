@@ -2,22 +2,24 @@ use std::path::Path;
 
 use crate::cmd::r#async as async_cmd;
 use crate::config::load_settings;
+use crate::engines::metrics_util::{error_metrics, finalize_metrics};
 use crate::install;
 use crate::pkgmgr::PackageManager;
 use crate::report;
 use crate::tools;
 use crate::types::LighthouseScores;
 use serde::Deserialize;
+use serde_json::json;
 
 pub async fn execute(url: &str, workspace: &str, settings: &crate::config::PlayhouseSettings) -> (i32, serde_json::Value) {
     if settings.auto_install_tools {
         if let Err(e) = install::ensure_lighthouse(workspace, true).await {
-            let metrics = serde_json::json!({
-                "engine": "lighthouse",
-                "error": e,
-                "fix": "playhouse install --full",
-                "passed": false,
-            });
+            let metrics = error_metrics(
+                "lighthouse",
+                5,
+                &e,
+                json!({ "fix": "playhouse install --full" }),
+            );
             let _ = report::save_engine_report(workspace, "lighthouse", &metrics);
             return (5, metrics);
         }
@@ -26,7 +28,7 @@ pub async fn execute(url: &str, workspace: &str, settings: &crate::config::Playh
     let raw = match exec_lighthouse(url, workspace, settings).await {
         Ok(r) => r,
         Err(e) => {
-            let metrics = serde_json::json!({ "engine": "lighthouse", "error": e, "passed": false });
+            let metrics = error_metrics("lighthouse", 5, &e, json!({}));
             let _ = report::save_engine_report(workspace, "lighthouse", &metrics);
             return (5, metrics);
         }
@@ -35,27 +37,43 @@ pub async fn execute(url: &str, workspace: &str, settings: &crate::config::Playh
     let scores = match parse_scores(&raw) {
         Ok(s) => s,
         Err(e) => {
-            let metrics = serde_json::json!({ "engine": "lighthouse", "error": e, "passed": false });
+            let metrics = error_metrics("lighthouse", 5, &e, json!({}));
             let _ = report::save_engine_report(workspace, "lighthouse", &metrics);
             return (5, metrics);
         }
     };
 
+    if !scores.has_any() {
+        let metrics = error_metrics(
+            "lighthouse",
+            5,
+            "Lighthouse returned no category scores",
+            json!({ "url": url }),
+        );
+        let _ = report::save_engine_report(workspace, "lighthouse", &metrics);
+        return (5, metrics);
+    }
+
     let threshold = settings.lighthouse_threshold;
     let passed = scores.all_pass(threshold);
     let code = if passed { 0 } else { 2 };
-    let metrics = serde_json::json!({
-        "engine": "lighthouse",
-        "url": url,
-        "passed": passed,
-        "threshold": threshold,
-        "scores": {
-            "performance": scores.performance,
-            "accessibility": scores.accessibility,
-            "bestPractices": scores.best_practices,
-            "seo": scores.seo,
-        },
-    });
+    let metrics = finalize_metrics(
+        code,
+        None,
+        json!({
+            "engine": "lighthouse",
+            "url": url,
+            "passed": passed,
+            "scanComplete": true,
+            "threshold": threshold,
+            "scores": {
+                "performance": scores.performance,
+                "accessibility": scores.accessibility,
+                "bestPractices": scores.best_practices,
+                "seo": scores.seo,
+            },
+        }),
+    );
     let _ = report::save_engine_report(workspace, "lighthouse", &metrics);
     (code, metrics)
 }
@@ -113,16 +131,29 @@ async fn exec_lighthouse(
 ) -> Result<String, String> {
     let pm = PackageManager::resolve(workspace, &settings.package_manager);
     let ctx = tools::resolve_node_tool_context(workspace);
-    let lh_args: Vec<&str> = vec![url, "--output=json", "--quiet", "--chrome-flags=--headless"];
+    let mut lh_args: Vec<String> = vec![
+        url.into(),
+        "--output=json".into(),
+        "--quiet".into(),
+        "--chrome-flags=--headless".into(),
+    ];
+    if let Some(headers) = crate::workspace::audit_headers(workspace) {
+        if !headers.is_empty() {
+            lh_args.push(format!(
+                "--extra-headers={}",
+                crate::workspace::lighthouse_extra_headers_json(&headers)
+            ));
+        }
+    }
+    let lh_refs: Vec<&str> = lh_args.iter().map(String::as_str).collect();
     let cwd = Path::new(&ctx.cwd);
     let prefix = ctx.npm_prefix.as_deref();
 
     let mut last_error = String::new();
 
-    // 1. Bundled or project lighthouse via package manager (offline after install)
     if tools::has_lighthouse(workspace) {
         match pm
-            .exec_with_bin_path(cwd, "lighthouse", &lh_args, prefix)
+            .exec_with_bin_path(cwd, "lighthouse", &lh_refs, prefix)
             .await
         {
             Ok(out) => {
@@ -137,9 +168,8 @@ async fn exec_lighthouse(
         }
     }
 
-    // 2. Global lighthouse on PATH (optional fallback, still offline if preinstalled)
     if let Ok(out) = async_cmd("lighthouse")
-        .args(&lh_args)
+        .args(&lh_refs)
         .current_dir(workspace)
         .output()
         .await

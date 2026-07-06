@@ -1,15 +1,23 @@
 use crate::cmd::r#async as async_cmd;
 use crate::engines::functional::{build_metrics, resolve_exit_code};
+use crate::engines::metrics_util::attach_failure_output;
 
-pub async fn execute(workspace: &str) -> (i32, serde_json::Value) {
+pub async fn execute(workspace: &str, pattern: Option<&str>) -> (i32, serde_json::Value) {
     let check = async_cmd("go").arg("version").output().await;
     if !matches!(check, Ok(o) if o.status.success()) {
         let metrics = build_metrics("go-test", 0, 0, 0, false, Some("go not found on PATH"));
         return (5, metrics);
     }
 
+    let mut args = vec!["test", "-json"];
+    if let Some(p) = pattern {
+        args.push("-run");
+        args.push(p);
+    }
+    args.push("./...");
+
     let out = async_cmd("go")
-        .args(["test", "-json", "./..."])
+        .args(&args)
         .current_dir(workspace)
         .output()
         .await;
@@ -17,11 +25,17 @@ pub async fn execute(workspace: &str) -> (i32, serde_json::Value) {
     match out {
         Ok(o) => {
             let stdout = String::from_utf8_lossy(&o.stdout);
+            let stderr = String::from_utf8_lossy(&o.stderr);
             let (passed, failed, skipped) = parse_go_json(&stdout);
             let no_tests = passed == 0 && failed == 0 && skipped == 0;
             let exit = o.status.code().unwrap_or(1);
             let code = resolve_exit_code(passed, failed, no_tests, exit, false);
-            let metrics = build_metrics("go-test", passed, failed, skipped, no_tests, None);
+            let metrics = attach_failure_output(
+                build_metrics("go-test", passed, failed, skipped, no_tests, None),
+                code,
+                &stdout,
+                &stderr,
+            );
             (code, metrics)
         }
         Err(e) => {

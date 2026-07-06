@@ -30,7 +30,7 @@ impl ProjectStack {
     }
 }
 
-/// Detected functional test runner (Phase 4 will execute these).
+/// Detected functional test runner.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum FunctionalRunner {
@@ -132,40 +132,66 @@ fn apply_workspace_overrides(workspace: &str, profile: &mut ProjectProfile) {
 
 pub fn detect_at(root: &Path) -> ProjectProfile {
     let mut signals = Vec::new();
+    detect_from_markers(root, &mut signals)
+        .or_else(|| detect_from_package_json(root, &mut signals))
+        .unwrap_or_else(|| {
+            ProjectProfile {
+                stack: ProjectStack::Unknown,
+                functional_runner: FunctionalRunner::None,
+                browser_audits: false,
+                signals,
+                language: "unknown".into(),
+            }
+        })
+}
 
+fn make_profile(
+    stack: ProjectStack,
+    runner: FunctionalRunner,
+    browser_audits: bool,
+    signals: Vec<String>,
+    language: &str,
+) -> ProjectProfile {
+    ProjectProfile {
+        stack,
+        functional_runner: runner,
+        browser_audits,
+        signals,
+        language: language.into(),
+    }
+}
+
+fn detect_from_markers(root: &Path, signals: &mut Vec<String>) -> Option<ProjectProfile> {
     if has_playwright_config(root) {
         signals.push("playwright.config.*".into());
-        return ProjectProfile {
-            stack: ProjectStack::WebE2e,
-            functional_runner: FunctionalRunner::Playwright,
-            browser_audits: true,
-            signals,
-            language: "javascript".into(),
-        };
+        return Some(make_profile(
+            ProjectStack::WebE2e,
+            FunctionalRunner::Playwright,
+            true,
+            std::mem::take(signals),
+            "javascript",
+        ));
     }
-
     if root.join("Cargo.toml").is_file() {
         signals.push("Cargo.toml".into());
-        return ProjectProfile {
-            stack: ProjectStack::Rust,
-            functional_runner: FunctionalRunner::CargoTest,
-            browser_audits: false,
-            signals,
-            language: "rust".into(),
-        };
+        return Some(make_profile(
+            ProjectStack::Rust,
+            FunctionalRunner::CargoTest,
+            false,
+            std::mem::take(signals),
+            "rust",
+        ));
     }
-
     if root.join("go.mod").is_file() {
         signals.push("go.mod".into());
-        return ProjectProfile {
-            stack: ProjectStack::Go,
-            functional_runner: FunctionalRunner::GoTest,
-            browser_audits: false,
-            signals,
-            language: "go".into(),
-        };
+        return Some(make_profile(
+            ProjectStack::Go,
+            FunctionalRunner::GoTest,
+            false,
+            std::mem::take(signals),
+            "go",
+        ));
     }
-
     if has_python_test_layout(root) {
         if root.join("pyproject.toml").is_file() {
             signals.push("pyproject.toml".into());
@@ -173,81 +199,64 @@ pub fn detect_at(root: &Path) -> ProjectProfile {
         if root.join("pytest.ini").is_file() {
             signals.push("pytest.ini".into());
         }
-        return ProjectProfile {
-            stack: ProjectStack::Python,
-            functional_runner: FunctionalRunner::Pytest,
-            browser_audits: false,
-            signals,
-            language: "python".into(),
-        };
+        return Some(make_profile(
+            ProjectStack::Python,
+            FunctionalRunner::Pytest,
+            false,
+            std::mem::take(signals),
+            "python",
+        ));
     }
-
     if root.join("pom.xml").is_file() {
         signals.push("pom.xml".into());
-        return ProjectProfile {
-            stack: ProjectStack::Java,
-            functional_runner: FunctionalRunner::MvnTest,
-            browser_audits: false,
-            signals,
-            language: "java".into(),
-        };
+        return Some(make_profile(
+            ProjectStack::Java,
+            FunctionalRunner::MvnTest,
+            false,
+            std::mem::take(signals),
+            "java",
+        ));
     }
-
     if has_gradle_layout(root) {
         signals.push("gradle".into());
-        return ProjectProfile {
-            stack: ProjectStack::Java,
-            functional_runner: FunctionalRunner::GradleTest,
-            browser_audits: false,
-            signals,
-            language: "java".into(),
-        };
+        return Some(make_profile(
+            ProjectStack::Java,
+            FunctionalRunner::GradleTest,
+            false,
+            std::mem::take(signals),
+            "java",
+        ));
     }
+    None
+}
 
-    if let Some(pkg) = read_package_json(root) {
-        signals.push("package.json".into());
-        let browser_app = package_suggests_browser_app(&pkg);
-        if has_vitest_or_jest(&pkg) {
-            if let Some(fw) = detect_js_test_framework(&pkg) {
-                signals.push(fw);
-            }
-            return ProjectProfile {
-                stack: ProjectStack::WebUnit,
-                functional_runner: FunctionalRunner::NpmTest,
-                browser_audits: browser_app,
-                signals,
-                language: "javascript".into(),
-            };
-        }
-        if package_has_test_script(&pkg) {
-            signals.push("npm test script".into());
-            return ProjectProfile {
-                stack: ProjectStack::WebUnit,
-                functional_runner: FunctionalRunner::NpmTest,
-                browser_audits: browser_app,
-                signals,
-                language: "javascript".into(),
-            };
-        }
-        if browser_app {
-            signals.push("web app dependencies".into());
-            return ProjectProfile {
-                stack: ProjectStack::WebUnit,
-                functional_runner: FunctionalRunner::None,
-                browser_audits: true,
-                signals,
-                language: "javascript".into(),
-            };
-        }
-    }
+fn detect_from_package_json(root: &Path, signals: &mut Vec<String>) -> Option<ProjectProfile> {
+    let pkg = read_package_json(root)?;
+    signals.push("package.json".into());
+    let browser_app = package_suggests_browser_app(&pkg);
 
-    ProjectProfile {
-        stack: ProjectStack::Unknown,
-        functional_runner: FunctionalRunner::None,
-        browser_audits: false,
-        signals,
-        language: "unknown".into(),
-    }
+    let (runner, browser_audits) = if has_vitest_or_jest(&pkg) {
+        if let Some(fw) = detect_js_test_framework(&pkg) {
+            signals.push(fw);
+        }
+        (FunctionalRunner::NpmTest, browser_app)
+    } else if package_has_test_script(&pkg) {
+        signals.push("npm test script".into());
+        (FunctionalRunner::NpmTest, browser_app)
+    } else if browser_app {
+        signals.push("web app dependencies".into());
+        (FunctionalRunner::None, true)
+    } else {
+        return None;
+    };
+
+    Some(make_profile(
+        ProjectStack::WebUnit,
+        runner,
+        browser_audits,
+        std::mem::take(signals),
+        "javascript",
+    ))
 }
 
 pub fn needs_alt_package_manager_checks(workspace: &str, package_manager_setting: &str) -> bool {

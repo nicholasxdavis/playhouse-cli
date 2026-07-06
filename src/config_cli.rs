@@ -35,6 +35,8 @@ pub fn schema() -> Vec<ConfigKey> {
         ConfigKey { key: "scan_root", scope: "workspace", kind: "string|null", description: "Monorepo subpath for stack detection and Trivy scans (e.g. apps/web)" },
         ConfigKey { key: "test_root", scope: "workspace", kind: "string|null", description: "Monorepo subpath where functional tests run (defaults to scan_root)" },
         ConfigKey { key: "functional_runner", scope: "workspace", kind: "string|null", description: "Override runner: playwright, cargo-test, go-test, pytest, npm-test, mvn-test, gradle-test, none" },
+        ConfigKey { key: "trivy_skip_dirs", scope: "workspace", kind: "string|null", description: "Comma-separated dirs for Trivy --skip-dirs (default: node_modules,.git,vendor)" },
+        ConfigKey { key: "audit_headers", scope: "workspace", kind: "object|null", description: "HTTP headers for Lighthouse/Arkenar JSON object e.g. {\"Authorization\":\"Bearer token\"}" },
         ConfigKey { key: "agent_notes", scope: "workspace", kind: "string|null", description: "Notes for agents working in this repo" },
         ConfigKey { key: "project_name", scope: "workspace", kind: "string|null", description: "Display name for this project" },
     ]
@@ -89,6 +91,8 @@ fn get_from(settings: &PlayhouseSettings, ws: &WorkspaceConfig, key: &str) -> Re
         "scan_root" => Ok(json!(ws.scan_root)),
         "test_root" => Ok(json!(ws.test_root)),
         "functional_runner" => Ok(json!(ws.functional_runner)),
+        "trivy_skip_dirs" => Ok(json!(ws.trivy_skip_dirs)),
+        "audit_headers" => Ok(json!(ws.audit_headers)),
         "agent_notes" => Ok(json!(ws.agent_notes)),
         "project_name" => Ok(json!(ws.project_name)),
         _ => Err(format!("Unknown key '{key}'. Run `playhouse config schema` for valid keys.")),
@@ -114,15 +118,32 @@ fn set_on(
             save_settings(settings);
         }
         "star_pass_threshold" => {
-            settings.star_pass_threshold = value.parse().map_err(|_| "star_pass_threshold must be 0-100")?;
+            let v: u8 = value
+                .parse()
+                .map_err(|_| "star_pass_threshold must be 0-100")?;
+            if v > 100 {
+                return Err("star_pass_threshold must be 0-100".into());
+            }
+            settings.star_pass_threshold = v;
             save_settings(settings);
         }
         "lighthouse_threshold" => {
-            settings.lighthouse_threshold = value.parse().map_err(|_| "lighthouse_threshold must be 0.0-1.0")?;
+            let v: f64 = value
+                .parse()
+                .map_err(|_| "lighthouse_threshold must be 0.0-1.0")?;
+            if !(0.0..=1.0).contains(&v) {
+                return Err("lighthouse_threshold must be 0.0-1.0".into());
+            }
+            settings.lighthouse_threshold = v;
             save_settings(settings);
         }
         "default_lighthouse_url" => {
-            settings.default_lighthouse_url = if nullish { None } else { Some(value.into()) };
+            if nullish {
+                settings.default_lighthouse_url = None;
+            } else {
+                crate::workspace::validate_default_url(value)?;
+                settings.default_lighthouse_url = Some(value.into());
+            }
             save_settings(settings);
         }
         "trivy_severity" => {
@@ -143,7 +164,12 @@ fn set_on(
         "playhouse_skill_enabled" => { settings.playhouse_skill_enabled = parse_bool(value)?; save_settings(settings); }
         "arkenar_advanced_mode" => { settings.arkenar_advanced_mode = parse_bool(value)?; save_settings(settings); }
         "default_url" => {
-            ws.default_url = if nullish { None } else { Some(value.into()) };
+            if nullish {
+                ws.default_url = None;
+            } else {
+                crate::workspace::validate_default_url(value)?;
+                ws.default_url = Some(value.into());
+            }
             save_workspace_config(workspace, ws).map_err(|e| e.to_string())?;
         }
         "scan_root" => {
@@ -163,6 +189,18 @@ fn set_on(
                 ws.functional_runner = Some(value.into());
             } else {
                 return Err("functional_runner must be playwright, npm-test, cargo-test, go-test, pytest, mvn-test, gradle-test, or none".into());
+            }
+            save_workspace_config(workspace, ws).map_err(|e| e.to_string())?;
+        }
+        "trivy_skip_dirs" => {
+            ws.trivy_skip_dirs = if nullish { None } else { Some(value.into()) };
+            save_workspace_config(workspace, ws).map_err(|e| e.to_string())?;
+        }
+        "audit_headers" => {
+            if nullish {
+                ws.audit_headers = None;
+            } else {
+                ws.audit_headers = Some(crate::workspace::parse_audit_headers(value)?);
             }
             save_workspace_config(workspace, ws).map_err(|e| e.to_string())?;
         }

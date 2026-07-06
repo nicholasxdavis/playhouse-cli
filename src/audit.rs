@@ -24,8 +24,9 @@ pub async fn run_audit(
     url: Option<&str>,
     settings: &PlayhouseSettings,
     quiet: bool,
+    test_pattern: Option<&str>,
 ) -> AuditReport {
-    run_audit_with_progress(workspace, url, settings, quiet, None::<fn(AuditProgress)>).await
+    run_audit_with_progress(workspace, url, settings, quiet, test_pattern, None::<fn(AuditProgress)>).await
 }
 
 pub async fn run_audit_with_progress<F>(
@@ -33,6 +34,7 @@ pub async fn run_audit_with_progress<F>(
     url: Option<&str>,
     settings: &PlayhouseSettings,
     quiet: bool,
+    test_pattern: Option<&str>,
     mut on_progress: Option<F>,
 ) -> AuditReport
 where
@@ -107,7 +109,7 @@ where
 
     if doctor_fail {
         progress(AuditProgress::Computing {
-            label: "Toolchain failed — skipping engines".into(),
+            label: "Toolchain failed; skipping engines".into(),
         });
         let playhouse_score = score::compute(&[], Some(&doctor), settings);
         return AuditReport {
@@ -138,7 +140,13 @@ where
             id: "trivy",
             label: "Running Trivy security scan…".into(),
         });
-        let (code, metrics) = engines::trivy::execute(workspace).await;
+        let (code, metrics) = engines::trivy::execute(
+            workspace,
+            &engines::trivy::TrivyOptions {
+                clear_cache: true,
+            },
+        )
+        .await;
         let vulns = metrics
             .get("summary")
             .and_then(|s| s.get("vulnerabilities"))
@@ -188,7 +196,7 @@ where
             id: "functional",
             label: format!("Running {runner_label} tests…"),
         });
-        let (code, metrics) = engines::functional::execute(workspace, &profile, None).await;
+        let (code, metrics) = engines::functional::execute(workspace, &profile, test_pattern).await;
         let (passed, failed, skipped, no_tests) = functional_stats(&metrics);
         engines.push(EngineResult {
             engine: "functional".into(),
@@ -261,46 +269,25 @@ async fn run_browser_audits<F>(
     F: FnMut(AuditProgress),
 {
     if !profile.browser_audits {
-        let reason = format!("not-applicable: browser audits N/A for {} stack", profile.stack.as_str());
-        engines.push(score::skipped_reason("arkenar", &reason));
-        engines.push(score::skipped_reason("lighthouse", &reason));
-        progress(AuditProgress::StepDone {
-            id: "arkenar",
-            label: "Arkenar DAST".into(),
-            ok: true,
-            detail: "N/A for this stack".into(),
-            skipped: true,
-        });
-        progress(AuditProgress::StepDone {
-            id: "lighthouse",
-            label: "Lighthouse".into(),
-            ok: true,
-            detail: "N/A for this stack".into(),
-            skipped: true,
-        });
+        let reason = format!(
+            "not-applicable: browser audits N/A for {} stack",
+            profile.stack.as_str()
+        );
+        push_browser_explicit_skip(engines, &reason, progress);
         return;
     }
 
     let Some(target) = target_url else {
         let reason = "no-url: set playhouse config set default_url or start dev server";
-        engines.push(score::skipped_reason("arkenar", reason));
-        engines.push(score::skipped_reason("lighthouse", reason));
-        progress(AuditProgress::StepDone {
-            id: "arkenar",
-            label: "Arkenar DAST".into(),
-            ok: true,
-            detail: "No URL — skipped".into(),
-            skipped: true,
-        });
-        progress(AuditProgress::StepDone {
-            id: "lighthouse",
-            label: "Lighthouse".into(),
-            ok: true,
-            detail: "No URL — skipped".into(),
-            skipped: true,
-        });
+        push_browser_missing(engines, settings, reason, progress);
         return;
     };
+
+    if !detect::probe_url(target) {
+        let reason = format!("url-unreachable: {target} is not responding");
+        push_browser_missing(engines, settings, &reason, progress);
+        return;
+    }
 
     if settings.skip_arkenar_in_verify {
         engines.push(score::skipped_reason("arkenar", "settings: skip_arkenar_in_verify"));
@@ -366,6 +353,78 @@ async fn run_browser_audits<F>(
             label: "Lighthouse".into(),
             ok: code == 0,
             detail: lh_detail,
+            skipped: false,
+        });
+    }
+}
+
+fn push_browser_explicit_skip<F>(engines: &mut Vec<EngineResult>, reason: &str, progress: &mut F)
+where
+    F: FnMut(AuditProgress),
+{
+    engines.push(score::skipped_reason("arkenar", reason));
+    engines.push(score::skipped_reason("lighthouse", reason));
+    progress(AuditProgress::StepDone {
+        id: "arkenar",
+        label: "Arkenar DAST".into(),
+        ok: true,
+        detail: "N/A for this stack".into(),
+        skipped: true,
+    });
+    progress(AuditProgress::StepDone {
+        id: "lighthouse",
+        label: "Lighthouse".into(),
+        ok: true,
+        detail: "N/A for this stack".into(),
+        skipped: true,
+    });
+}
+
+fn push_browser_missing<F>(
+    engines: &mut Vec<EngineResult>,
+    settings: &PlayhouseSettings,
+    reason: &str,
+    progress: &mut F,
+) where
+    F: FnMut(AuditProgress),
+{
+    if settings.skip_lighthouse_without_server {
+        engines.push(score::implicit_penalty("arkenar", reason));
+        engines.push(score::implicit_penalty("lighthouse", reason));
+        let detail: String = if reason.starts_with("url-unreachable") {
+            "URL not reachable; skipped".into()
+        } else {
+            "No URL; skipped".into()
+        };
+        progress(AuditProgress::StepDone {
+            id: "arkenar",
+            label: "Arkenar DAST".into(),
+            ok: true,
+            detail: detail.clone(),
+            skipped: true,
+        });
+        progress(AuditProgress::StepDone {
+            id: "lighthouse",
+            label: "Lighthouse".into(),
+            ok: true,
+            detail,
+            skipped: true,
+        });
+    } else {
+        engines.push(score::browser_required_failure("arkenar", reason));
+        engines.push(score::browser_required_failure("lighthouse", reason));
+        progress(AuditProgress::StepDone {
+            id: "arkenar",
+            label: "Arkenar DAST".into(),
+            ok: false,
+            detail: reason.into(),
+            skipped: false,
+        });
+        progress(AuditProgress::StepDone {
+            id: "lighthouse",
+            label: "Lighthouse".into(),
+            ok: false,
+            detail: reason.into(),
             skipped: false,
         });
     }

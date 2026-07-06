@@ -1,5 +1,4 @@
 use std::io::{self, Stdout};
-use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use crossterm::event::{self, Event, KeyEventKind};
@@ -8,16 +7,18 @@ use ratatui::{
     layout::{Alignment, Constraint, Layout, Rect},
     style::Modifier,
     text::{Line, Span},
-    widgets::{Block, Borders, Gauge, Paragraph},
+    widgets::{Block, Borders, Clear, Gauge, Paragraph},
     Frame, Terminal,
 };
 use unicode_width::UnicodeWidthStr;
 
 use crate::config::playhouse_home;
+use crate::tui::ascii_asset;
 use crate::tui::spinner;
 use crate::tui::theme;
 
 const EMBEDDED: &str = include_str!("../../splash.txt");
+const LOGO_LINES: usize = 8;
 
 const STEPS_NORMAL: &[&str] = &[
     "Loading workspace",
@@ -58,46 +59,76 @@ pub fn mark_launched() {
     );
 }
 
-fn find_splash(workspace: &str) -> Option<PathBuf> {
-    let candidates = [
-        Path::new(workspace).join("splash.txt"),
-        playhouse_home().join("splash.txt"),
-    ];
-    candidates.into_iter().find(|p| p.is_file())
+pub fn load_lines(workspace: &str) -> Vec<String> {
+    let lines = ascii_asset::load_asset_lines(workspace, "splash.txt", EMBEDDED);
+    trim_leading_margin(&lines)
 }
 
-pub fn load_lines(workspace: &str) -> Vec<String> {
-    if let Some(path) = find_splash(workspace) {
-        if let Ok(content) = std::fs::read_to_string(path) {
-            let lines: Vec<String> = content.lines().map(str::to_string).collect();
-            if !lines.is_empty() {
-                return lines;
+/// Strip shared leading whitespace; keep only the main logo rows (drop orphan tail).
+fn trim_leading_margin(lines: &[String]) -> Vec<String> {
+    let indent = lines
+        .iter()
+        .filter(|l| l.chars().any(|c| !c.is_whitespace()))
+        .map(|l| l.chars().take_while(|c| *c == ' ').count())
+        .min()
+        .unwrap_or(0);
+    lines
+        .iter()
+        .map(|l| {
+            if l.len() <= indent {
+                String::new()
+            } else {
+                l[indent..].to_string()
             }
-        }
-    }
-    EMBEDDED.lines().map(str::to_string).collect()
+        })
+        .filter(|l| l.chars().any(|c| !c.is_whitespace()))
+        .take(LOGO_LINES)
+        .collect()
 }
 
 pub fn run(
     terminal: &mut Terminal<CrosstermBackend<Stdout>>,
-    workspace: &str,
+    _workspace: &str,
     first_run: bool,
 ) -> io::Result<()> {
-    let lines = load_lines(workspace);
-    let total_ticks = if first_run { 58u64 } else { 42u64 };
+    let lines = load_lines(_workspace);
+    let total_ticks = if first_run { 50u64 } else { 36u64 };
     let steps = if first_run { STEPS_FIRST } else { STEPS_NORMAL };
-    let tick_rate = Duration::from_millis(48);
+    let tick_rate = Duration::from_millis(40);
     let mut tick: u64 = 0;
 
     while tick < total_ticks {
+        terminal.autoresize()?;
         terminal.draw(|f| draw_frame(f, &lines, tick, total_ticks, steps, first_run))?;
 
-        if event::poll(tick_rate)? {
+        if !event::poll(tick_rate)? {
+            tick += 1;
+            continue;
+        }
+
+        let mut skip = false;
+        let mut resized = false;
+        let mut events = 0u32;
+        loop {
             match event::read()? {
-                Event::Key(key) if key.kind == KeyEventKind::Press => break,
-                Event::Resize(_, _) => {}
+                Event::Key(key) if key.kind == KeyEventKind::Press => {
+                    skip = true;
+                    break;
+                }
+                Event::Resize(_, _) => resized = true,
                 _ => {}
             }
+            events += 1;
+            if events > 64 || !event::poll(Duration::from_millis(0))? {
+                break;
+            }
+        }
+
+        if skip {
+            break;
+        }
+        if resized {
+            continue;
         }
         tick += 1;
     }
@@ -115,36 +146,44 @@ fn draw_frame(
     first_run: bool,
 ) {
     let area = f.area();
+    if area.width == 0 || area.height == 0 {
+        return;
+    }
+
+    f.render_widget(Clear, area);
     f.render_widget(
         Block::default().style(theme::text().bg(theme::get_bg_color())),
         area,
     );
 
-    if area.width < 24 || area.height < 12 {
+    if area.width < 24 || area.height < 10 {
         draw_compact(f, area, tick, total_ticks, steps);
         return;
     }
 
-    let logo_width = lines
+    let logo_w = lines
         .iter()
         .map(|l| l.width())
         .max()
-        .unwrap_or(40) as u16;
+        .unwrap_or(40)
+        .clamp(20, 88) as u16;
 
-    let logo_height = lines.len() as u16;
-    let chrome = 8u16 + if first_run { 1 } else { 0 };
-    let block_height = logo_height + chrome;
+    let logo_h = lines.len() as u16;
+    let chrome = 4u16 + if first_run { 1 } else { 0 };
+    let ideal_h = logo_h + chrome + 2;
+    let panel_h = ideal_h.min(area.height.saturating_sub(2)).max(chrome + 3);
+    let panel_w = logo_w.saturating_add(4).min(area.width.saturating_sub(2)).max(28);
 
     let vertical = Layout::vertical([
         Constraint::Fill(1),
-        Constraint::Length(block_height),
+        Constraint::Length(panel_h),
         Constraint::Fill(1),
     ])
     .split(area);
 
     let horizontal = Layout::horizontal([
         Constraint::Fill(1),
-        Constraint::Length(logo_width.min(area.width.saturating_sub(4)).max(24)),
+        Constraint::Length(panel_w),
         Constraint::Fill(1),
     ])
     .split(vertical[1]);
@@ -159,56 +198,60 @@ fn draw_frame(
     );
 
     let inner = Block::default().borders(Borders::NONE).inner(panel);
-    let sections = Layout::vertical([
-        Constraint::Length(if first_run { 1 } else { 0 }),
-        Constraint::Min(logo_height),
-        Constraint::Length(1),
-        Constraint::Length(1),
-        Constraint::Length(1),
-        Constraint::Length(1),
-    ])
-    .split(inner);
+    let mut rows = Vec::new();
+    if first_run {
+        rows.push(Constraint::Length(1));
+    }
+    let art_h = inner
+        .height
+        .saturating_sub(chrome)
+        .max(1)
+        .min(logo_h);
+    rows.push(Constraint::Length(art_h));
+    rows.extend([Constraint::Length(1), Constraint::Length(1), Constraint::Length(1), Constraint::Length(1)]);
+    let sections = Layout::vertical(rows).split(inner);
 
-    let mut row = 0usize;
+    let art_idx = if first_run { 1 } else { 0 };
+    let status_idx = art_idx + 1;
+
     if first_run {
         f.render_widget(
             Paragraph::new(Line::from(Span::styled(
-                "  first launch",
+                "first launch",
                 theme::accent_bold().add_modifier(Modifier::ITALIC),
             )))
             .alignment(Alignment::Center),
-            sections[row],
+            sections[0],
         );
-        row += 1;
     }
 
-    let revealed_lines = ((tick * (lines.len() as u64 + 1)) / (total_ticks * 2 / 3))
+    let revealed = ((tick * (lines.len() as u64 + 1)) / (total_ticks * 2 / 3))
         .min(lines.len() as u64) as usize;
     let partial = tick % 4;
     let art_lines: Vec<Line> = lines
         .iter()
+        .take(art_h as usize)
         .enumerate()
         .map(|(i, line)| {
-            if i < revealed_lines {
-                Line::from(Span::styled(line.as_str(), theme::accent_bold()))
-            } else if i == revealed_lines && partial > 0 {
+            if i < revealed {
+                Line::from(Span::styled(line.as_str(), theme::splash_art()))
+            } else if i == revealed && partial > 0 {
                 let cut = (line.len() * partial as usize / 4).min(line.len());
                 let (bright, dim) = line.split_at(cut);
                 Line::from(vec![
-                    Span::styled(bright, theme::accent_bold()),
-                    Span::styled(dim, theme::text_dim()),
+                    Span::styled(bright, theme::splash_art()),
+                    Span::styled(dim, theme::splash_art_dim()),
                 ])
             } else {
-                Line::from(Span::styled(line.as_str(), theme::text_dim()))
+                Line::from(Span::styled(line.as_str(), theme::splash_art_dim()))
             }
         })
         .collect();
 
     f.render_widget(
-        Paragraph::new(art_lines).alignment(Alignment::Left),
-        sections[row],
+        Paragraph::new(art_lines).alignment(Alignment::Center),
+        sections[art_idx],
     );
-    row += 1;
 
     let step_idx = ((tick * steps.len() as u64) / total_ticks.max(1))
         .min(steps.len().saturating_sub(1) as u64) as usize;
@@ -220,22 +263,17 @@ fn draw_frame(
             Span::styled("…", theme::text_dim()),
         ]))
         .alignment(Alignment::Center),
-        sections[row],
+        sections[status_idx],
     );
-    row += 1;
 
     let percent = ((tick * 100) / total_ticks.max(1)).min(100) as u16;
     f.render_widget(
         Gauge::default()
             .gauge_style(theme::accent())
             .percent(percent)
-            .label(Span::styled(
-                format!("{percent}%"),
-                theme::text_muted(),
-            )),
-        sections[row],
+            .label(Span::styled(format!("{percent}%"), theme::text_muted())),
+        sections[status_idx + 1],
     );
-    row += 1;
 
     f.render_widget(
         Paragraph::new(Line::from(Span::styled(
@@ -243,23 +281,18 @@ fn draw_frame(
             theme::text_muted(),
         )))
         .alignment(Alignment::Center),
-        sections[row],
+        sections[status_idx + 2],
     );
-    row += 1;
 
     let version = env!("CARGO_PKG_VERSION");
-    let hint = if tick > 6 {
-        " · any key to skip"
-    } else {
-        ""
-    };
+    let hint = if tick > 4 { " · any key to skip" } else { "" };
     f.render_widget(
         Paragraph::new(Line::from(vec![
             Span::styled(format!("v{version}"), theme::text_dim()),
             Span::styled(hint, theme::text_dim()),
         ]))
         .alignment(Alignment::Center),
-        sections[row],
+        sections[status_idx + 3],
     );
 }
 
@@ -279,7 +312,7 @@ fn draw_compact(f: &mut Frame, area: Rect, tick: u64, total_ticks: u64, steps: &
 
     f.render_widget(
         Paragraph::new(vec![
-            Line::from(Span::styled("Playhouse", theme::accent_bold())),
+            Line::from(Span::styled("Playhouse", theme::splash_art())),
             Line::from(vec![
                 Span::styled(format!("{spin} "), theme::accent_bold()),
                 Span::styled(steps[step_idx], theme::text()),
@@ -304,6 +337,20 @@ mod tests {
     #[test]
     fn embedded_splash_not_empty() {
         assert!(!EMBEDDED.trim().is_empty());
-        assert!(load_lines(".").len() >= 8);
+        assert!(load_lines(".").len() >= 6);
+    }
+
+    #[test]
+    fn trim_margin_removes_shared_indent() {
+        let lines = vec!["    aa".into(), "    bb".into()];
+        let trimmed = trim_leading_margin(&lines);
+        assert_eq!(trimmed.len(), 2);
+        assert_eq!(trimmed[0], "aa");
+    }
+
+    #[test]
+    fn logo_capped_at_eight_lines() {
+        let lines: Vec<String> = (0..12).map(|i| format!("    line{i}")).collect();
+        assert_eq!(trim_leading_margin(&lines).len(), LOGO_LINES);
     }
 }

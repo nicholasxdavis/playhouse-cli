@@ -2,7 +2,7 @@
 
 Project: playhouse cli
 Workspace: C:\Users\lifa2\OneDrive\Desktop\playhouse cli
-Verify URL: none
+Verify URL: http://localhost:3000
 Stack: rust | Functional runner: cargo-test | Browser audits: false
 Tools ready: 4/4
 Last score: 100/100 (Production Ready)

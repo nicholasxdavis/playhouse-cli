@@ -58,7 +58,7 @@ pub async fn run(cli: Cli) -> i32 {
 
         Some(Commands::Playwright { pattern }) => audit::run_playwright(&ctx, pattern).await,
 
-        Some(Commands::Functional) => audit::run_functional(&ctx).await,
+        Some(Commands::Functional { pattern }) => audit::run_functional(&ctx, pattern).await,
 
         Some(Commands::Test { action }) => test_cmd::run(&ctx, action).await,
 
@@ -66,7 +66,21 @@ pub async fn run(cli: Cli) -> i32 {
 
         Some(Commands::Arkenar { url }) => audit::run_arkenar(&ctx, url).await,
 
-        Some(Commands::Verify { url }) => audit::run_verify(&ctx, url).await,
+        Some(Commands::Verify {
+            url,
+            test,
+            start_server,
+            server_port,
+            server_timeout,
+        }) => audit::run_verify(
+            &ctx,
+            url,
+            test,
+            start_server,
+            server_port,
+            server_timeout,
+        )
+        .await,
 
         Some(Commands::Score { url, last }) => audit::run_score(&ctx, url, last).await,
 

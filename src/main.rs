@@ -1,3 +1,4 @@
+mod dev_server;
 mod agent;
 mod audit;
 mod baseplates;

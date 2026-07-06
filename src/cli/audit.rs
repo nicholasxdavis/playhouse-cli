@@ -15,13 +15,13 @@ pub async fn run_lighthouse(ctx: &Context<'_>, url: Option<String>) -> i32 {
 pub async fn run_playwright(ctx: &Context<'_>, pattern: Option<String>) -> i32 {
     let profile = project::detect(ctx.workspace);
     if profile.functional_runner != FunctionalRunner::Playwright {
-        return engines::functional::run(ctx.workspace, ctx.json, false).await;
+        return engines::functional::run(ctx.workspace, pattern.as_deref(), ctx.json, false).await;
     }
     engines::playwright::run(ctx.workspace, pattern.as_deref(), ctx.json, false).await
 }
 
-pub async fn run_functional(ctx: &Context<'_>) -> i32 {
-    engines::functional::run(ctx.workspace, ctx.json, false).await
+pub async fn run_functional(ctx: &Context<'_>, pattern: Option<String>) -> i32 {
+    engines::functional::run(ctx.workspace, pattern.as_deref(), ctx.json, false).await
 }
 
 pub async fn run_trivy(ctx: &Context<'_>) -> i32 {
@@ -33,9 +33,21 @@ pub async fn run_arkenar(ctx: &Context<'_>, url: Option<String>) -> i32 {
     engines::arkenar::run(&target, ctx.workspace, ctx.json, false).await
 }
 
-pub async fn run_verify(ctx: &Context<'_>, url: Option<String>) -> i32 {
-    let target = url.or_else(|| workspace::resolve_verify_url(ctx.workspace, ctx.settings));
-    handlers::run_verify(ctx.workspace, target.as_deref(), ctx.json, ctx.settings).await
+pub async fn run_verify(
+    ctx: &Context<'_>,
+    url: Option<String>,
+    test: Option<String>,
+    start_server: Option<String>,
+    server_port: Option<u16>,
+    server_timeout: u64,
+) -> i32 {
+    let options = handlers::VerifyOptions {
+        test_pattern: test.as_deref(),
+        start_server: start_server.as_deref(),
+        server_port,
+        server_timeout,
+    };
+    handlers::run_verify(ctx.workspace, url.as_deref(), &options, ctx.json, ctx.settings).await
 }
 
 pub async fn run_score(ctx: &Context<'_>, url: Option<String>, last: bool) -> i32 {
@@ -44,7 +56,7 @@ pub async fn run_score(ctx: &Context<'_>, url: Option<String>, last: bool) -> i3
     }
 
     let target = url.or_else(|| workspace::resolve_verify_url(ctx.workspace, ctx.settings));
-    let report = audit::run_audit(ctx.workspace, target.as_deref(), ctx.settings, ctx.json).await;
+    let report = audit::run_audit(ctx.workspace, target.as_deref(), ctx.settings, ctx.json, None).await;
     if ctx.json {
         output::print_json(&audit::audit_json(&report));
     }

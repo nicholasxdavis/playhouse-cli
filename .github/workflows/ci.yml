@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main, master]
 
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
   PLAYHOUSE_GITHUB_REPO: nicholasxdavis/playhouse-cli
@@ -14,11 +17,11 @@ jobs:
   version-sync:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
-      - name: Cargo.toml ↔ npm version sync
+      - name: Cargo.toml npm version sync
         run: node scripts/check-version-sync.js
 
   rust:
@@ -37,18 +40,22 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
         with:
           targets: ${{ matrix.target }}
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          prefix-key: ci-${{ matrix.os }}-${{ matrix.target }}
+          shared-key: v1
+          save-if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Unit + integration tests
+      - name: Unit and integration tests
         run: cargo test --target ${{ matrix.target }}
 
       - name: Clippy (deny warnings)
@@ -64,14 +71,14 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
 
       - name: Build native binary
         run: cargo build --release
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
 
@@ -108,21 +115,34 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          prefix-key: verify-${{ matrix.os }}
+          shared-key: v1
+          save-if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
       - name: Build release binary
         run: cargo build --release
 
       - name: Install minimal bundled tools
-        run: ${{ matrix.bin }} install --minimal --json
+        shell: bash
+        env:
+          PH_BIN: ${{ matrix.bin }}
+        run: '"$PH_BIN" install --minimal --json'
 
-      - name: Verify (Rust workspace — browser audits N/A)
-        run: ${{ matrix.bin }} verify --json
+      - name: Verify Rust workspace
+        shell: bash
+        env:
+          PH_BIN: ${{ matrix.bin }}
+        run: '"$PH_BIN" verify --json'
 
       - name: Functional fixture smoke
-        run: ${{ matrix.bin }} functional --json
+        shell: bash
+        env:
+          PH_BIN: ${{ matrix.bin }}
         working-directory: tests/fixtures/rust-app
+        run: '"$PH_BIN" functional --json'

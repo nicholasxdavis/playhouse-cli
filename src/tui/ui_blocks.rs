@@ -120,7 +120,14 @@ pub fn render_block(block: &ContentBlock, max_width: usize, tick: u64) -> Vec<Li
             status,
             summary,
             detail,
-        } => render_tool_call(name, status, summary, detail.as_deref(), max_width, tick),
+        } => render_tool_call(&ToolCallRenderCtx {
+            name,
+            status,
+            summary,
+            detail: detail.as_deref(),
+            max_width,
+            tick,
+        }),
         ContentBlock::ScoreReport {
             score,
             exit_code,
@@ -166,40 +173,33 @@ fn render_code_preview(content: &str, max_width: usize) -> Vec<Line<'static>> {
     out
 }
 
-fn render_tool_call(
-    name: &str,
-    status: &ToolStatus,
-    summary: &str,
-    detail: Option<&str>,
-    max_width: usize,
-    tick: u64,
-) -> Vec<Line<'static>> {
-    let (icon, status_style) = match status {
+fn render_tool_call(ctx: &ToolCallRenderCtx<'_>) -> Vec<Line<'static>> {
+    let (icon, status_style) = match ctx.status {
         ToolStatus::Running => {
-            let spin = spinner::frame(tick);
+            let spin = spinner::frame(ctx.tick);
             (spin, theme::status_busy())
         }
         ToolStatus::Success => ("+", theme::status_ready()),
         ToolStatus::Error => ("x", theme::status_error()),
     };
 
-    let dots = ".".repeat(tick as usize / 10 % 4);
-    let summary_display = if matches!(status, ToolStatus::Running) {
-        format!("{summary}{dots}")
+    let dots = ".".repeat(ctx.tick as usize / 10 % 4);
+    let summary_display = if matches!(ctx.status, ToolStatus::Running) {
+        format!("{}{dots}", ctx.summary)
     } else {
-        summary.to_string()
+        ctx.summary.to_string()
     };
 
     let mut out = vec![Line::from(vec![
         Span::styled("  ", Style::default()),
         Span::styled(format!("{icon} "), status_style),
-        Span::styled(name.to_string(), theme::accent_bold()),
+        Span::styled(ctx.name.to_string(), theme::accent_bold()),
         Span::styled(" | ", theme::text_dim()),
         Span::styled(summary_display, theme::text()),
     ])];
 
-    if let Some(d) = detail {
-        for wl in text_box::wrap_text(d, max_width.saturating_sub(4)) {
+    if let Some(d) = ctx.detail {
+        for wl in text_box::wrap_text(d, ctx.max_width.saturating_sub(4)) {
             out.push(Line::from(vec![
                 Span::styled("    ", Style::default()),
                 Span::styled(wl, theme::system_detail_text()),
@@ -208,6 +208,15 @@ fn render_tool_call(
     }
 
     out
+}
+
+struct ToolCallRenderCtx<'a> {
+    name: &'a str,
+    status: &'a ToolStatus,
+    summary: &'a str,
+    detail: Option<&'a str>,
+    max_width: usize,
+    tick: u64,
 }
 
 fn render_todo_list(title: &str, items: &[TodoItem], max_width: usize, tick: u64) -> Vec<Line<'static>> {
@@ -294,10 +303,20 @@ fn render_score_report(
     max_width: usize,
     reveal: u64,
 ) -> Vec<Line<'static>> {
-    let mut out = Vec::new();
-    let overall_style = score_stars_style(score.stars);
+    let mut out = render_score_header(score);
+    out.push(Line::from(""));
+    out.extend(render_category_table(score, max_width));
+    out.push(Line::from(""));
+    out.extend(render_engine_list(engines, reveal));
+    out.extend(render_why_section(score, reveal));
+    out.push(Line::from(""));
+    out.extend(render_score_footer(exit_code, reveal));
+    out
+}
 
-    out.push(Line::from(vec![
+fn render_score_header(score: &PlayhouseScore) -> Vec<Line<'static>> {
+    let overall_style = score_stars_style(score.stars);
+    vec![Line::from(vec![
         Span::styled("  Playhouse Stars  ", theme::accent_bold()),
         Span::styled(
             format!("{} / 100", score.stars),
@@ -305,23 +324,24 @@ fn render_score_report(
         ),
         Span::styled(format!("  {}  ", score.grade_emoji), theme::text()),
         Span::styled(score.grade.clone(), overall_style),
-    ]));
+    ])]
+}
 
-    out.push(Line::from(""));
-
+fn render_category_table(score: &PlayhouseScore, max_width: usize) -> Vec<Line<'static>> {
     let col1 = 22usize;
     let col2 = 8usize;
-    out.push(Line::from(vec![
-        Span::styled("  ", Style::default()),
-        Span::styled(pad_right("Category", col1), theme::accent()),
-        Span::styled(pad_right("Score", col2), theme::accent()),
-        Span::styled("Summary", theme::accent()),
-    ]));
-    out.push(Line::from(Span::styled(
-        format!("  {}", "-".repeat(max_width.saturating_sub(4).min(60))),
-        theme::border(),
-    )));
-
+    let mut out = vec![
+        Line::from(vec![
+            Span::styled("  ", Style::default()),
+            Span::styled(pad_right("Category", col1), theme::accent()),
+            Span::styled(pad_right("Score", col2), theme::accent()),
+            Span::styled("Summary", theme::accent()),
+        ]),
+        Line::from(Span::styled(
+            format!("  {}", "-".repeat(max_width.saturating_sub(4).min(60))),
+            theme::border(),
+        )),
+    ];
     for cat in &score.categories {
         if cat.skipped {
             out.push(Line::from(vec![
@@ -340,75 +360,83 @@ fn render_score_report(
             Span::styled(cat.summary.clone(), theme::text_muted()),
         ]));
     }
+    out
+}
 
-    out.push(Line::from(""));
-
-    if reveal > 4 {
-        out.push(Line::from(Span::styled("  Engines", theme::accent_bold())));
-        for er in engines {
-            let (icon, style) = if er.skipped {
-                ("-", theme::todo_item_skipped())
-            } else if er.exit_code == 0 {
-                ("+", theme::status_ready())
-            } else {
-                ("x", theme::status_error())
-            };
-            let label = if er.skipped {
-                format!("{} (skipped)", er.engine)
-            } else {
-                format!("{} exit {}", er.engine, er.exit_code)
-            };
-            out.push(Line::from(vec![
-                Span::styled("    ", Style::default()),
-                Span::styled(format!("{icon} "), style),
-                Span::styled(label, theme::text_muted()),
-            ]));
-        }
+fn render_engine_list(engines: &[EngineResult], reveal: u64) -> Vec<Line<'static>> {
+    if reveal <= 4 {
+        return Vec::new();
     }
-
-    if reveal > 8 && !score.why.is_empty() {
-        out.push(Line::from(""));
-        out.push(Line::from(Span::styled("  Why", theme::accent_bold())));
-        let ticks_per_line = 10u64;
-        for (i, line) in score.why.iter().enumerate() {
-            let line_start = 8 + i as u64 * ticks_per_line;
-            if reveal < line_start {
-                break;
-            }
-            let chars_visible = ((reveal - line_start) * 3).min(line.len() as u64) as usize;
-            let text: String = line.chars().take(chars_visible).collect();
-            let cursor = if chars_visible < line.len() { "|" } else { "" };
-            out.push(Line::from(vec![
-                Span::styled("    - ", theme::accent()),
-                Span::styled(format!("{text}{cursor}"), theme::text()),
-            ]));
-        }
+    let mut out = vec![Line::from(Span::styled("  Engines", theme::accent_bold()))];
+    for er in engines {
+        let (icon, style) = engine_row_style(er);
+        let label = if er.skipped {
+            format!("{} (skipped)", er.engine)
+        } else {
+            format!("{} exit {}", er.engine, er.exit_code)
+        };
+        out.push(Line::from(vec![
+            Span::styled("    ", Style::default()),
+            Span::styled(format!("{icon} "), style),
+            Span::styled(label, theme::text_muted()),
+        ]));
     }
+    out
+}
 
-    out.push(Line::from(""));
+fn engine_row_style(er: &EngineResult) -> (&'static str, Style) {
+    if er.skipped {
+        ("-", theme::todo_item_skipped())
+    } else if er.exit_code == 0 {
+        ("+", theme::status_ready())
+    } else {
+        ("x", theme::status_error())
+    }
+}
+
+fn render_why_section(score: &PlayhouseScore, reveal: u64) -> Vec<Line<'static>> {
+    if reveal <= 8 || score.why.is_empty() {
+        return Vec::new();
+    }
+    let mut out = vec![Line::from(""), Line::from(Span::styled("  Why", theme::accent_bold()))];
+    let ticks_per_line = 10u64;
+    for (i, line) in score.why.iter().enumerate() {
+        let line_start = 8 + i as u64 * ticks_per_line;
+        if reveal < line_start {
+            break;
+        }
+        let chars_visible = ((reveal - line_start) * 3).min(line.len() as u64) as usize;
+        let text: String = line.chars().take(chars_visible).collect();
+        let cursor = if chars_visible < line.len() { "|" } else { "" };
+        out.push(Line::from(vec![
+            Span::styled("    - ", theme::accent()),
+            Span::styled(format!("{text}{cursor}"), theme::text()),
+        ]));
+    }
+    out
+}
+
+fn render_score_footer(exit_code: i32, reveal: u64) -> Vec<Line<'static>> {
     let result_style = if exit_code == 0 {
         theme::status_ready()
     } else {
         theme::status_error()
     };
-    out.push(Line::from(vec![
+    let mut out = vec![Line::from(vec![
         Span::styled("  Report  ", theme::text_dim()),
         Span::styled(".playhouse/reports/score.json", theme::code_style()),
-    ]));
+    ])];
     if reveal > 2 {
+        let label = if exit_code == 0 {
+            "  Verify passed"
+        } else {
+            "  Verify failed"
+        };
         out.push(Line::from(vec![
-            Span::styled(
-                if exit_code == 0 {
-                    "  Verify passed"
-                } else {
-                    "  Verify failed"
-                },
-                result_style,
-            ),
+            Span::styled(label, result_style),
             Span::styled(format!(" | exit {exit_code}"), theme::text_muted()),
         ]));
     }
-
     out
 }
 

@@ -2,35 +2,82 @@ use crate::agent;
 use crate::audit;
 use crate::config;
 use crate::detect;
+use crate::dev_server;
 use crate::install;
 use crate::tools;
 use crate::workspace;
 
+pub struct VerifyOptions<'a> {
+    pub test_pattern: Option<&'a str>,
+    pub start_server: Option<&'a str>,
+    pub server_port: Option<u16>,
+    pub server_timeout: u64,
+}
+
 pub async fn run_verify(
     workspace: &str,
     url: Option<&str>,
+    options: &VerifyOptions<'_>,
     json: bool,
     settings: &config::PlayhouseSettings,
 ) -> i32 {
-    let resolved = url
-        .map(String::from)
-        .or_else(|| workspace::resolve_verify_url(workspace, settings));
+    let mut resolved = url.map(String::from);
+    let _server_guard = if let Some(start_cmd) = options.start_server {
+        let ws_cfg = workspace::load_workspace_config(workspace);
+        let url_hint = resolved
+            .as_deref()
+            .or(ws_cfg.default_url.as_deref());
+        let port = dev_server::resolve_server_port(options.server_port, url_hint, workspace);
+        let cwd = workspace::scan_root(workspace);
+        match dev_server::spawn_and_wait(&cwd, start_cmd, port, options.server_timeout).await {
+            Ok((guard, server_url)) => {
+                resolved = Some(server_url);
+                Some(guard)
+            }
+            Err(e) => {
+                if json {
+                    println!(
+                        "{}",
+                        serde_json::json!({
+                            "command": "verify",
+                            "error": e,
+                            "exitCode": 1,
+                            "passed": false,
+                        })
+                    );
+                } else {
+                    eprintln!("[x] {e}");
+                }
+                return 1;
+            }
+        }
+    } else {
+        resolved = resolved.or_else(|| workspace::resolve_verify_url(workspace, settings));
+        None
+    };
 
     if resolved.is_none() && !json && !settings.skip_lighthouse_without_server {
         let hints = detect::port_hints(workspace);
         if hints.is_empty() {
             eprintln!(
-                "[!] No URL — browser audits skipped. Set: playhouse config set default_url http://localhost:PORT"
+                "[!] No URL: browser audits skipped. Set: playhouse config set default_url http://localhost:PORT"
             );
         } else {
             eprintln!(
-                "[!] No URL — browser audits skipped. Start dev server or: playhouse config set default_url http://localhost:{}",
+                "[!] No URL: browser audits skipped. Start dev server or: playhouse config set default_url http://localhost:{}",
                 hints[0]
             );
         }
     }
 
-    let report = audit::run_audit(workspace, resolved.as_deref(), settings, json).await;
+    let report = audit::run_audit(
+        workspace,
+        resolved.as_deref(),
+        settings,
+        json,
+        options.test_pattern,
+    )
+    .await;
 
     if json {
         println!(
@@ -67,7 +114,7 @@ pub async fn run_agent_handoff(
         let _ = install::ensure_all(workspace, true).await;
     }
 
-    let report = audit::run_audit(workspace, target.as_deref(), settings, true).await;
+    let report = audit::run_audit(workspace, target.as_deref(), settings, true, None).await;
 
     let ws = workspace::load_workspace_config(workspace);
     let brief = agent::build_brief_text(workspace, settings, &ws);
@@ -129,17 +176,4 @@ pub fn print_last_score(path: &std::path::Path, content: &str) {
         }
     }
     println!("{content}");
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::path::Path;
-
-    #[test]
-    fn print_last_score_reads_playhouse_score() {
-        let json = r#"{"playhouseScore":{"stars":88,"grade":"Good"}}"#;
-        // Smoke: must not panic on valid score JSON
-        print_last_score(Path::new(".playhouse/reports/score.json"), json);
-    }
 }

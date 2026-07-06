@@ -70,4 +70,10 @@ impl LighthouseScores {
             .iter()
             .all(|s| s.is_some_and(|v| v >= threshold))
     }
+
+    pub fn has_any(&self) -> bool {
+        [self.performance, self.accessibility, self.best_practices, self.seo]
+            .iter()
+            .any(|s| s.is_some())
+    }
 }

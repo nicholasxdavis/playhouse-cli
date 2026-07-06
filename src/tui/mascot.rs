@@ -1,5 +1,3 @@
-use std::path::{Path, PathBuf};
-
 use ratatui::{
     layout::Rect,
     text::{Line, Span},
@@ -8,38 +6,22 @@ use ratatui::{
 };
 use unicode_width::UnicodeWidthStr;
 
-use crate::config::playhouse_home;
+use crate::tui::ascii_asset;
 use crate::tui::theme;
 
 const EMBEDDED: &str = include_str!("../../mascot.txt");
 
-pub fn find_mascot(workspace: &str) -> Option<PathBuf> {
-    let candidates = [
-        Path::new(workspace).join("mascot.txt"),
-        playhouse_home().join("mascot.txt"),
-    ];
-    candidates.into_iter().find(|p| p.is_file())
-}
-
 pub fn load_lines(workspace: &str) -> Vec<String> {
-    if let Some(path) = find_mascot(workspace) {
-        if let Ok(content) = std::fs::read_to_string(path) {
-            let lines: Vec<String> = content.lines().map(str::to_string).collect();
-            if !lines.is_empty() {
-                return lines;
-            }
-        }
-    }
-    EMBEDDED.lines().map(str::to_string).collect()
+    ascii_asset::load_asset_lines(workspace, "mascot.txt", EMBEDDED)
 }
 
 pub fn line_count(workspace: &str) -> usize {
     load_lines(workspace).len()
 }
 
-/// Header row height for the welcome panel (borders + art).
+/// Header row height: mascot art + border, capped tight.
 pub fn welcome_header_height(workspace: &str) -> u16 {
-    (line_count(workspace) as u16 + 2).clamp(8, 14)
+    (line_count(workspace) as u16 + 2).clamp(8, 12)
 }
 
 pub fn render_corner(f: &mut Frame, area: Rect, workspace: &str, min_width: u16) {
@@ -69,7 +51,7 @@ pub fn render_corner(f: &mut Frame, area: Rect, workspace: &str, min_width: u16)
 
     let art_lines: Vec<Line> = lines
         .iter()
-        .map(|l| Line::from(Span::styled(l.as_str(), theme::accent_bold())))
+        .map(|l| Line::from(Span::styled(l.as_str(), theme::mascot_art())))
         .collect();
 
     f.render_widget(Paragraph::new(art_lines), art_rect);

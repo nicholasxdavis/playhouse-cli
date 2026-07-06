@@ -152,6 +152,18 @@ pub fn progress_bar(filled: usize, total: usize) -> Style {
     }
 }
 
+pub fn splash_art() -> Style {
+    Style::default().fg(Color::Rgb(205, 210, 220))
+}
+
+pub fn splash_art_dim() -> Style {
+    Style::default().fg(Color::Rgb(110, 115, 128))
+}
+
+pub fn mascot_art() -> Style {
+    Style::default().fg(Color::Rgb(185, 190, 200))
+}
+
 pub fn accent() -> Style {
     Style::default().fg(get_accent_color())
 }

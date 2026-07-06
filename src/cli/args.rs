@@ -83,7 +83,10 @@ pub enum Commands {
     },
 
     /// Run detected functional test runner (playwright, cargo, go, pytest, npm test, …)
-    Functional,
+    Functional {
+        /// Optional test file or grep pattern
+        pattern: Option<String>,
+    },
 
     /// Scaffold and run test baseplates
     Test {
@@ -105,6 +108,22 @@ pub enum Commands {
         /// Target URL for browser-based checks
         #[arg(long)]
         url: Option<String>,
+
+        /// Run only tests matching this file or pattern
+        #[arg(long)]
+        test: Option<String>,
+
+        /// Shell command to start the dev server (e.g. "npm run dev")
+        #[arg(long)]
+        start_server: Option<String>,
+
+        /// Port to poll when using --start-server (default: from URL hints or 3000)
+        #[arg(long)]
+        server_port: Option<u16>,
+
+        /// Seconds to wait for the dev server to respond
+        #[arg(long, default_value_t = 120)]
+        server_timeout: u64,
     },
 
     /// Show or compute Playhouse Star Rating (0–100 audit score)

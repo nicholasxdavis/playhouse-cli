@@ -244,7 +244,12 @@ impl App {
     pub fn on_resize(&mut self) {
         self.feed_scroll_dragging = false;
         self.feed_select_dragging = false;
-        self.local_server = detect::find_local_server(&self.workspace);
+        self.feed_text_selection = None;
+        self.input_select_anchor = None;
+        self.input_pane_area = Rect::default();
+        self.feed_pane_area = Rect::default();
+        self.feed_scrollbar_area = Rect::default();
+        self.feed_scrollbar_track_area = Rect::default();
         self.refresh_feed_scroll_metrics();
         if self.feed_stick_bottom {
             self.scroll_feed_bottom();
@@ -253,10 +258,15 @@ impl App {
         }
     }
 
+    /// Slow network probe — never call from resize hot path.
+    pub fn refresh_local_server(&mut self) {
+        self.local_server = detect::find_local_server(&self.workspace);
+    }
+
     pub fn set_doctor_stats(&mut self, pass: usize, total: usize) {
         self.doctor_pass_count = Some((pass, total));
         self.tools_summary = format!("{pass}/{total} tools ready");
-        self.local_server = detect::find_local_server(&self.workspace);
+        self.refresh_local_server();
         self.invalidate_brief();
     }
 
@@ -394,6 +404,27 @@ impl App {
         self.feed_scroll_dragging = false;
         self.feed_scroll_target = 0.0;
         self.feed_scroll_pos = 0.0;
+    }
+
+    pub fn handle_mouse(&mut self, event: crossterm::event::MouseEvent) {
+        use crossterm::event::MouseEventKind;
+        use ratatui::layout::Position;
+
+        let pos = Position::new(event.column, event.row);
+        let on_input = self.input_pane_area.contains(pos);
+
+        if on_input {
+            self.feed_select_dragging = false;
+            self.feed_scroll_dragging = false;
+            self.feed_text_selection = None;
+            if matches!(event.kind, MouseEventKind::Down(_)) {
+                self.input_select_anchor = None;
+            }
+        }
+
+        if self.mode == AppMode::Normal {
+            self.handle_feed_mouse(event);
+        }
     }
 
     pub fn handle_feed_mouse(&mut self, event: crossterm::event::MouseEvent) {

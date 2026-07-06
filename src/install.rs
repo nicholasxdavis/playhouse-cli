@@ -208,7 +208,7 @@ pub async fn install_web_tools(workspace: &str, quiet: bool) -> Result<Vec<Strin
         );
     }
 
-    pm.install(&npm_dir)
+    pm.install_resilient(&npm_dir)
         .await
         .map_err(|e| format!("{} install failed: {e}", pm.label()))?;
 

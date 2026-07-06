@@ -5,9 +5,6 @@ on:
     tags:
       - 'v*'
 
-permissions:
-  contents: write
-
 env:
   CARGO_TERM_COLOR: always
   PLAYHOUSE_GITHUB_REPO: nicholasxdavis/playhouse-cli
@@ -15,16 +12,20 @@ env:
 jobs:
   version-sync:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
-      - name: Cargo.toml ↔ npm version sync
+      - name: Cargo.toml npm version sync
         run: node scripts/check-version-sync.js
 
   build:
     needs: version-sync
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -53,13 +54,17 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
         with:
           targets: ${{ matrix.target }}
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          prefix-key: release-${{ matrix.os }}-${{ matrix.target }}
+          shared-key: v1
+          save-if: ${{ github.ref_type == 'tag' }}
 
       - name: Read version
         id: version
@@ -72,46 +77,54 @@ jobs:
       - name: Package (zip)
         if: matrix.archive == 'zip'
         shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+          TARGET: ${{ matrix.target }}
+          BIN_NAME: ${{ matrix.bin }}
         run: |
-          $version = "${{ steps.version.outputs.value }}"
-          $target = "${{ matrix.target }}"
-          $src = "target/${{ matrix.target }}/release/${{ matrix.bin }}"
-          $name = "playhouse-$version-$target.zip"
+          $src = "target/$env:TARGET/release/$env:BIN_NAME"
+          $name = "playhouse-$env:VERSION-$env:TARGET.zip"
           Compress-Archive -Path $src -DestinationPath $name -Force
           echo "ASSET=$name" >> $env:GITHUB_ENV
 
       - name: Package (tar.gz)
         if: matrix.archive == 'tar.gz'
         shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+          TARGET: ${{ matrix.target }}
+          BIN_NAME: ${{ matrix.bin }}
         run: |
-          version="${{ steps.version.outputs.value }}"
-          target="${{ matrix.target }}"
-          src="target/${{ matrix.target }}/release/${{ matrix.bin }}"
-          name="playhouse-${version}-${target}.tar.gz"
+          src="target/${TARGET}/release/${BIN_NAME}"
+          name="playhouse-${VERSION}-${TARGET}.tar.gz"
           tar czf "$name" -C "$(dirname "$src")" "$(basename "$src")"
           echo "ASSET=$name" >> "$GITHUB_ENV"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.target }}
           path: ${{ env.ASSET }}
+          retention-days: 7
+          if-no-files-found: error
 
   release:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           path: artifacts
           merge-multiple: true
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: artifacts/*
           generate_release_notes: true
@@ -119,9 +132,11 @@ jobs:
   npm-version-check:
     needs: release
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
       - name: Verify npm package version matches Cargo.toml
@@ -130,14 +145,15 @@ jobs:
   npm-publish:
     needs: npm-version-check
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org
-      - name: Publish @nicholasxdavis/playhouse-cli to npm
+      - name: Publish to npm (OIDC trusted publishing)
         working-directory: packages/playhouse
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public

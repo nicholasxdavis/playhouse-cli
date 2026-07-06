@@ -1,6 +1,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 use crate::config::PlayhouseSettings;
@@ -25,6 +27,10 @@ pub struct WorkspaceConfig {
     pub test_root: Option<String>,
     /// Override auto-detected functional runner (e.g. playwright, cargo-test).
     pub functional_runner: Option<String>,
+    /// Comma-separated dirs for Trivy --skip-dirs (default: node_modules,.git,vendor).
+    pub trivy_skip_dirs: Option<String>,
+    /// HTTP headers for Lighthouse and Arkenar (e.g. Authorization). Do not commit secrets.
+    pub audit_headers: Option<HashMap<String, String>>,
     pub agent_notes: Option<String>,
 }
 
@@ -39,9 +45,71 @@ impl Default for WorkspaceConfig {
             scan_root: None,
             test_root: None,
             functional_runner: None,
+            trivy_skip_dirs: None,
+            audit_headers: None,
             agent_notes: None,
         }
     }
+}
+
+const DEFAULT_TRIVY_SKIP_DIRS: &str = "node_modules,.git,vendor";
+
+/// Directories passed to Trivy `--skip-dirs` (dot-directories like `.well-known` are not skipped).
+pub fn trivy_skip_dirs(workspace: &str) -> Vec<String> {
+    let ws = load_workspace_config(workspace);
+    let raw = ws
+        .trivy_skip_dirs
+        .as_deref()
+        .unwrap_or(DEFAULT_TRIVY_SKIP_DIRS);
+    raw.split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
+pub fn audit_headers(workspace: &str) -> Option<HashMap<String, String>> {
+    load_workspace_config(workspace).audit_headers
+}
+
+/// JSON string for Lighthouse `--extra-headers`.
+pub fn lighthouse_extra_headers_json(headers: &HashMap<String, String>) -> String {
+    serde_json::to_string(headers).unwrap_or_else(|_| "{}".into())
+}
+
+/// Arkenar `--header "Name: value"` argument pairs.
+pub fn arkenar_header_args(headers: &HashMap<String, String>) -> Vec<String> {
+    let mut args = Vec::new();
+    for (name, value) in headers {
+        args.push("--header".into());
+        args.push(format!("{name}: {value}"));
+    }
+    args
+}
+
+/// Validate audit_headers JSON object on config set.
+pub fn parse_audit_headers(value: &str) -> Result<HashMap<String, String>, String> {
+    let v: serde_json::Value = serde_json::from_str(value)
+        .map_err(|_| "audit_headers must be JSON, e.g. {\"Authorization\":\"Bearer token\"}".to_string())?;
+    let Some(obj) = v.as_object() else {
+        return Err("audit_headers must be a JSON object".into());
+    };
+    if obj.is_empty() {
+        return Err("audit_headers cannot be empty".into());
+    }
+    let mut map = HashMap::new();
+    for (k, val) in obj {
+        if k.trim().is_empty() {
+            return Err("audit_headers keys cannot be empty".into());
+        }
+        let s = val
+            .as_str()
+            .ok_or_else(|| format!("audit_headers value for '{k}' must be a string"))?;
+        if s.is_empty() {
+            return Err(format!("audit_headers value for '{k}' cannot be empty"));
+        }
+        map.insert(k.clone(), s.to_string());
+    }
+    Ok(map)
 }
 
 /// Resolved filesystem roots for a workspace (repo root vs monorepo sub-packages).
@@ -149,7 +217,38 @@ pub fn test_root_str(workspace: &str) -> String {
 }
 
 pub fn validate_workspace_subpath(workspace: &str, relative: Option<&str>) -> Result<(), String> {
-    resolve_subpath(Path::new(workspace), relative).map(|_| ())
+    let path = resolve_subpath(Path::new(workspace), relative)?;
+    if let Some(rel) = relative {
+        let rel = rel.trim();
+        if !rel.is_empty() {
+            let meta = std::fs::metadata(&path)
+                .map_err(|_| format!("path does not exist: {rel}"))?;
+            if !meta.is_dir() {
+                return Err(format!("path is not a directory: {rel}"));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Validate a workspace verify URL before saving to config.
+pub fn validate_default_url(url: &str) -> Result<(), String> {
+    let url = url.trim();
+    if url.is_empty() {
+        return Err("default_url cannot be empty".into());
+    }
+    let rest = if let Some(r) = url.strip_prefix("https://") {
+        r
+    } else if let Some(r) = url.strip_prefix("http://") {
+        r
+    } else {
+        return Err("default_url must start with http:// or https://".into());
+    };
+    let host_port = rest.split('/').next().unwrap_or(rest);
+    if host_port.is_empty() || host_port.contains(' ') {
+        return Err("default_url is not a valid URL".into());
+    }
+    Ok(())
 }
 
 fn resolve_subpath(workspace: &Path, relative: Option<&str>) -> Result<PathBuf, String> {
@@ -549,5 +648,28 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         assert!(validate_workspace_subpath(dir.to_str().unwrap(), Some("../outside")).is_err());
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn validate_default_url_requires_http_scheme() {
+        assert!(validate_default_url("http://localhost:3000").is_ok());
+        assert!(validate_default_url("abc").is_err());
+    }
+
+    #[test]
+    fn validate_subpath_requires_existing_dir() {
+        let dir = std::env::temp_dir().join(format!("playhouse-val-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        assert!(validate_workspace_subpath(dir.to_str().unwrap(), Some("missing")).is_err());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn parse_audit_headers_accepts_json_object() {
+        let map = parse_audit_headers(r#"{"Authorization":"Bearer tok"}"#).unwrap();
+        assert_eq!(map.get("Authorization").map(String::as_str), Some("Bearer tok"));
+        assert!(parse_audit_headers("[]").is_err());
+        assert!(parse_audit_headers("{}").is_err());
     }
 }

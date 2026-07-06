@@ -2,19 +2,16 @@ use std::path::Path;
 
 use crate::cmd::r#async as async_cmd;
 use crate::config::load_settings;
+use crate::engines::metrics_util::{error_metrics, finalize_metrics};
 use crate::install;
 use crate::report;
 use crate::tools;
+use serde_json::{json, Value};
 
 pub async fn execute(url: &str, workspace: &str) -> (i32, serde_json::Value) {
     if load_settings().auto_install_tools {
         if let Err(e) = install::ensure_arkenar(true).await {
-            let metrics = serde_json::json!({
-                "engine": "arkenar",
-                "error": e,
-                "fix": "playhouse install",
-                "passed": false,
-            });
+            let metrics = error_metrics("arkenar", 5, &e, json!({ "fix": "playhouse install" }));
             let _ = report::save_engine_report(workspace, "arkenar", &metrics);
             return (5, metrics);
         }
@@ -23,12 +20,12 @@ pub async fn execute(url: &str, workspace: &str) -> (i32, serde_json::Value) {
     let program = tools::arkenar_program();
     let check = async_cmd(&program).arg("--help").output().await;
     if !matches!(check, Ok(o) if o.status.success()) {
-        let metrics = serde_json::json!({
-            "engine": "arkenar",
-            "error": "arkenar not installed",
-            "fix": "playhouse install",
-            "passed": false,
-        });
+        let metrics = error_metrics(
+            "arkenar",
+            5,
+            "arkenar not installed",
+            json!({ "fix": "playhouse install" }),
+        );
         let _ = report::save_engine_report(workspace, "arkenar", &metrics);
         return (5, metrics);
     }
@@ -45,7 +42,6 @@ pub async fn execute(url: &str, workspace: &str) -> (i32, serde_json::Value) {
     };
 
     let mut args = vec![
-        url.to_string(),
         "-m".into(),
         mode.into(),
         "-o".into(),
@@ -56,6 +52,12 @@ pub async fn execute(url: &str, workspace: &str) -> (i32, serde_json::Value) {
         "--crawler-max-urls".into(),
         settings.arkenar_max_urls.to_string(),
     ];
+
+    if let Some(headers) = crate::workspace::audit_headers(workspace) {
+        args.extend(crate::workspace::arkenar_header_args(&headers));
+    }
+
+    args.push(url.to_string());
 
     if settings.arkenar_param_fuzz {
         args.push("--enable-param-fuzz".into());
@@ -72,61 +74,117 @@ pub async fn execute(url: &str, workspace: &str) -> (i32, serde_json::Value) {
 
     match result {
         Ok(out) => {
-            let exit = out.status.code().unwrap_or(1);
+            let tool_exit = out.status.code().unwrap_or(1);
             let stdout = String::from_utf8_lossy(&out.stdout);
             let findings = parse_report(&output_path).or_else(|| parse_stdout_json(&stdout));
 
             if findings.is_none() {
-                let metrics = serde_json::json!({
-                    "engine": "arkenar",
-                    "passed": false,
-                    "reportParseError": true,
-                    "target": url,
-                    "reportPath": output_path,
-                    "exitCode": exit,
-                    "error": if output_path.is_file() {
-                        "failed to parse arkenar report"
+                let code = if tool_exit != 0 { tool_exit } else { 5 };
+                let metrics = finalize_metrics(
+                    code,
+                    if tool_exit != code {
+                        Some(tool_exit)
                     } else {
-                        "arkenar report file missing"
+                        None
                     },
-                });
+                    json!({
+                        "engine": "arkenar",
+                        "passed": false,
+                        "scanComplete": false,
+                        "reportParseError": true,
+                        "target": url,
+                        "reportPath": output_path,
+                        "error": if output_path.is_file() {
+                            "failed to parse arkenar report"
+                        } else {
+                            "arkenar report file missing"
+                        },
+                    }),
+                );
                 let _ = report::save_engine_report(workspace, "arkenar", &metrics);
-                return (if exit != 0 { exit } else { 5 }, metrics);
+                return (code, metrics);
             }
 
             let data = findings.unwrap();
+            if !report_file_valid(&output_path) && report_is_empty(&data) {
+                let code = if tool_exit != 0 { tool_exit } else { 5 };
+                let metrics = finalize_metrics(
+                    code,
+                    Some(tool_exit),
+                    json!({
+                        "engine": "arkenar",
+                        "passed": false,
+                        "scanComplete": false,
+                        "reportParseError": true,
+                        "target": url,
+                        "reportPath": output_path,
+                        "error": "arkenar produced no usable report",
+                    }),
+                );
+                let _ = report::save_engine_report(workspace, "arkenar", &metrics);
+                return (code, metrics);
+            }
+
             let (high, medium, low, total) = summarize_findings(&data);
+            if tool_exit != 0 && total == 0 {
+                let code = if tool_exit != 0 { tool_exit } else { 5 };
+                let metrics = finalize_metrics(
+                    code,
+                    Some(tool_exit),
+                    json!({
+                        "engine": "arkenar",
+                        "passed": false,
+                        "scanComplete": false,
+                        "target": url,
+                        "reportPath": output_path,
+                        "error": "arkenar exited with error and no findings",
+                    }),
+                );
+                let _ = report::save_engine_report(workspace, "arkenar", &metrics);
+                return (code, metrics);
+            }
+
             let threshold_fail = high > 0 || medium > 0;
-            let passed = !threshold_fail && exit == 0;
+            let passed = !threshold_fail && tool_exit == 0;
             let code = if threshold_fail {
                 3
-            } else if exit != 0 {
+            } else if tool_exit != 0 {
                 1
             } else {
                 0
             };
-            let metrics = serde_json::json!({
-                "engine": "arkenar",
-                "passed": passed,
-                "target": url,
-                "reportPath": output_path,
-                "summary": {
-                    "high": high,
-                    "medium": medium,
-                    "low": low,
-                    "total": total,
+            let metrics = finalize_metrics(
+                code,
+                if tool_exit != code {
+                    Some(tool_exit)
+                } else {
+                    None
                 },
-                "raw": data,
-            });
+                json!({
+                    "engine": "arkenar",
+                    "passed": passed,
+                    "scanComplete": true,
+                    "target": url,
+                    "reportPath": output_path,
+                    "summary": {
+                        "high": high,
+                        "medium": medium,
+                        "low": low,
+                        "total": total,
+                    },
+                    "raw": data,
+                }),
+            );
             let _ = report::save_engine_report(workspace, "arkenar", &metrics);
             (code, metrics)
         }
         Err(e) => {
-            let metrics = serde_json::json!({
-                "engine": "arkenar",
-                "error": format!("Failed to run arkenar: {e}"),
-                "passed": false,
-            });
+            let metrics = error_metrics(
+                "arkenar",
+                5,
+                &format!("Failed to run arkenar: {e}"),
+                json!({}),
+            );
             let _ = report::save_engine_report(workspace, "arkenar", &metrics);
             (5, metrics)
         }
@@ -163,12 +221,27 @@ pub async fn run(url: &str, workspace: &str, json: bool, quiet: bool) -> i32 {
     code
 }
 
-fn parse_report(path: &Path) -> Option<serde_json::Value> {
+fn report_file_valid(path: &Path) -> bool {
+    std::fs::metadata(path)
+        .map(|m| m.len() > 2)
+        .unwrap_or(false)
+}
+
+fn report_is_empty(data: &Value) -> bool {
+    match data {
+        Value::Object(m) => m.is_empty(),
+        Value::Array(a) => a.is_empty(),
+        Value::Null => true,
+        _ => false,
+    }
+}
+
+fn parse_report(path: &Path) -> Option<Value> {
     let content = std::fs::read_to_string(path).ok()?;
     serde_json::from_str(&content).ok()
 }
 
-fn parse_stdout_json(stdout: &str) -> Option<serde_json::Value> {
+fn parse_stdout_json(stdout: &str) -> Option<Value> {
     for line in stdout.lines() {
         let trimmed = line.trim();
         if trimmed.starts_with('{') || trimmed.starts_with('[') {
@@ -180,7 +253,7 @@ fn parse_stdout_json(stdout: &str) -> Option<serde_json::Value> {
     None
 }
 
-fn summarize_findings(data: &serde_json::Value) -> (u64, u64, u64, u64) {
+fn summarize_findings(data: &Value) -> (u64, u64, u64, u64) {
     let mut high = 0u64;
     let mut medium = 0u64;
     let mut low = 0u64;
@@ -200,14 +273,14 @@ fn summarize_findings(data: &serde_json::Value) -> (u64, u64, u64, u64) {
     (high, medium, low, total)
 }
 
-fn walk_findings(value: &serde_json::Value, on_severity: &mut dyn FnMut(&str)) {
+fn walk_findings(value: &Value, on_severity: &mut dyn FnMut(&str)) {
     match value {
-        serde_json::Value::Array(arr) => {
+        Value::Array(arr) => {
             for item in arr {
                 walk_findings(item, on_severity);
             }
         }
-        serde_json::Value::Object(map) => {
+        Value::Object(map) => {
             if let Some(sev) = map
                 .get("severity")
                 .or_else(|| map.get("risk"))

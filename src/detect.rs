@@ -53,7 +53,7 @@ pub fn port_hints(workspace: &str) -> Vec<u16> {
     ports
 }
 
-/// First hinted port as a URL (no TCP probe) — useful when the dev server is not running yet.
+/// First hinted port as a URL (no TCP probe).
 pub fn suggested_local_url(workspace: &str) -> Option<String> {
     port_hints(workspace)
         .first()
@@ -80,6 +80,33 @@ fn probe_ports(ports: &[u16]) -> Option<String> {
         }
     }
     None
+}
+
+/// TCP probe for a configured http(s) URL (used before browser audits).
+pub fn probe_url(url: &str) -> bool {
+    let url = url.trim();
+    let (scheme, rest) = if let Some(r) = url.strip_prefix("https://") {
+        ("https", r)
+    } else if let Some(r) = url.strip_prefix("http://") {
+        ("http", r)
+    } else {
+        return false;
+    };
+    let host_port = rest.split('/').next().unwrap_or(rest);
+    let (host, port) = if let Some((h, p)) = host_port.rsplit_once(':') {
+        (h, p.parse::<u16>().ok())
+    } else {
+        (host_port, None)
+    };
+    let port = port.unwrap_or(if scheme == "https" { 443 } else { 80 });
+    let host = match host {
+        "localhost" | "127.0.0.1" => "127.0.0.1",
+        other => other,
+    };
+    let Ok(addr) = format!("{host}:{port}").parse::<SocketAddr>() else {
+        return false;
+    };
+    TcpStream::connect_timeout(&addr, Duration::from_millis(2000)).is_ok()
 }
 
 fn push_port(port: u16, ports: &mut Vec<u16>) {
@@ -220,21 +247,33 @@ pub fn check_playhouse_install() -> HealthCheck {
         .map(|p| p.display().to_string())
         .unwrap_or_else(|| "playhouse".into());
     let version = env!("CARGO_PKG_VERSION");
-
-    let detail = if exe_display.contains("node_modules") && exe_display.contains("playhouse") {
-        format!("npm-bundled v{version}")
-    } else if exe_display.contains("\\target\\") || exe_display.contains("/target/") {
-        format!("cargo local build v{version} ({exe_display})")
-    } else if exe_display.contains(".cargo\\bin")
-        || exe_display.contains(".cargo/bin")
-        || exe_display.contains("\\cargo\\bin")
-    {
-        format!("cargo install v{version}")
-    } else {
-        format!("PATH v{version} ({exe_display})")
+    let detail = match classify_install_source(&exe_display) {
+        "npm-bundled" => format!("npm-bundled v{version}"),
+        "cargo-local" => format!("cargo local build v{version} ({exe_display})"),
+        "cargo-install" => format!("cargo install v{version}"),
+        _ => format!("PATH v{version} ({exe_display})"),
     };
 
     HealthCheck::pass("Playhouse CLI", &detail)
+}
+
+fn classify_install_source(exe_display: &str) -> &'static str {
+    let from_npm = exe_display.contains("node_modules") && exe_display.contains("playhouse");
+    let from_cargo_build =
+        exe_display.contains("\\target\\") || exe_display.contains("/target/");
+    let from_cargo_install = exe_display.contains(".cargo\\bin")
+        || exe_display.contains(".cargo/bin")
+        || exe_display.contains("\\cargo\\bin");
+
+    if from_npm {
+        "npm-bundled"
+    } else if from_cargo_build {
+        "cargo-local"
+    } else if from_cargo_install {
+        "cargo-install"
+    } else {
+        "path"
+    }
 }
 
 fn command_ok(cmd: &str, args: &[&str]) -> bool {
@@ -389,7 +428,7 @@ pub fn check_local_server(workspace: &str) -> HealthCheck {
                 "no dev server detected on common ports".into()
             } else {
                 format!(
-                    "no server on hinted ports ({}) — start dev server or: playhouse config set default_url http://localhost:{}",
+                    "no server on hinted ports ({}); start dev server or: playhouse config set default_url http://localhost:{}",
                     hints.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(", "),
                     hints[0]
                 )
@@ -397,6 +436,33 @@ pub fn check_local_server(workspace: &str) -> HealthCheck {
             HealthCheck::warn("Local server", &detail)
         }
     }
+}
+
+pub fn check_workspace_deps(workspace: &str, package_manager: &str) -> HealthCheck {
+    let scan = crate::workspace::scan_root(workspace);
+    if !scan.join("package.json").is_file() {
+        return HealthCheck::pass("Workspace dependencies", "n/a (no package.json)");
+    }
+    let node_modules = scan.join("node_modules");
+    if node_modules.is_dir() {
+        if std::fs::read_dir(&node_modules)
+            .map(|mut d| d.next().is_some())
+            .unwrap_or(false)
+        {
+            return HealthCheck::pass("Workspace dependencies", "node_modules present");
+        }
+    }
+    let pm = PackageManager::resolve(workspace, package_manager);
+    let hint = match pm {
+        PackageManager::Npm => "npm install",
+        PackageManager::Pnpm => "pnpm install",
+        PackageManager::Yarn => "yarn install",
+        PackageManager::Bun => "bun install",
+    };
+    HealthCheck::warn(
+        "Workspace dependencies",
+        &format!("node_modules missing or empty - run {hint}"),
+    )
 }
 
 pub fn check_arkenar() -> HealthCheck {
@@ -490,6 +556,7 @@ pub fn run_doctor(workspace: &str) -> Vec<HealthCheck> {
         checks.push(check_node());
         checks.push(check_package_manager(workspace));
         checks.push(check_npm());
+        checks.push(check_workspace_deps(workspace, &settings.package_manager));
         if project::needs_alt_package_manager_checks(workspace, &settings.package_manager) {
             checks.push(check_pnpm());
             checks.push(check_yarn());

@@ -2,9 +2,10 @@ use std::path::Path;
 
 use crate::cmd::r#async as async_cmd;
 use crate::engines::functional::{build_metrics, resolve_exit_code};
+use crate::engines::metrics_util::attach_failure_output;
 use crate::tools;
 
-pub async fn execute(workspace: &str) -> (i32, serde_json::Value) {
+pub async fn execute(workspace: &str, pattern: Option<&str>) -> (i32, serde_json::Value) {
     let program = if cfg!(windows) { "pytest.exe" } else { "pytest" };
     let check = async_cmd(program).arg("--version").output().await;
     let check_ok = matches!(&check, Ok(o) if o.status.success());
@@ -30,25 +31,32 @@ pub async fn execute(workspace: &str) -> (i32, serde_json::Value) {
     let _ = std::fs::create_dir_all(&report_dir);
     let junit_path = report_dir.join("pytest-junit.xml");
 
+    let junit_arg = format!("--junitxml={}", junit_path.display());
+    let mut pytest_args = vec!["-m", "pytest", "--tb=short", "-q", &junit_arg];
+    if let Some(p) = pattern {
+        pytest_args.push(p);
+    }
+
     let out = async_cmd(if cfg!(windows) { "python.exe" } else { "python" })
-        .args([
-            "-m",
-            "pytest",
-            "--tb=no",
-            "-q",
-            &format!("--junitxml={}", junit_path.display()),
-        ])
+        .args(&pytest_args)
         .current_dir(workspace)
         .output()
         .await;
 
     match out {
         Ok(o) => {
+            let stdout = String::from_utf8_lossy(&o.stdout);
+            let stderr = String::from_utf8_lossy(&o.stderr);
             let (passed, failed, skipped) = parse_junit(&junit_path);
             let no_tests = passed == 0 && failed == 0 && skipped == 0;
             let exit = o.status.code().unwrap_or(1);
             let code = resolve_exit_code(passed, failed, no_tests, exit, false);
-            let metrics = build_metrics("pytest", passed, failed, skipped, no_tests, None);
+            let metrics = attach_failure_output(
+                build_metrics("pytest", passed, failed, skipped, no_tests, None),
+                code,
+                &stdout,
+                &stderr,
+            );
             (code, metrics)
         }
         Err(e) => {

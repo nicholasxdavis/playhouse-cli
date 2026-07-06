@@ -24,7 +24,7 @@ Default **pass threshold**: **75** (`star_pass_threshold` in settings). Verify f
 
 ## Categories (weighted)
 
-Each engine normalizes to 0–100, then weights combine (skipped engines rebalance):
+Each engine normalizes to 0-100, then weights combine. Explicit skips (settings, N/A stack) rebalance weights. Missing or unreachable browser audits score 0/100 without rebalancing.
 
 | Category | Weight | Engine |
 |----------|-------:|--------|

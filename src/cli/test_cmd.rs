@@ -10,7 +10,7 @@ pub async fn run(ctx: &Context<'_>, action: TestAction) -> i32 {
         TestAction::List => run_list(ctx),
         TestAction::Init { plate, force } => run_init(ctx, plate.as_deref(), force),
         TestAction::Add { plate, force } => run_add(ctx, &plate, force),
-        TestAction::Run => engines::functional::run(ctx.workspace, ctx.json, false).await,
+        TestAction::Run => engines::functional::run(ctx.workspace, None, ctx.json, false).await,
     }
 }
 

@@ -33,16 +33,23 @@ pub async fn execute(
             let (code, m) = crate::engines::playwright::execute(workspace, pattern).await;
             (code, normalize_playwright(&m, runner))
         }
-        FunctionalRunner::CargoTest => cargo::execute(&test_root).await,
-        FunctionalRunner::GoTest => go::execute(&test_root).await,
-        FunctionalRunner::Pytest => pytest::execute(&test_root).await,
-        FunctionalRunner::NpmTest => npm_test::execute(&test_root).await,
+        FunctionalRunner::CargoTest => cargo::execute(&test_root, pattern).await,
+        FunctionalRunner::GoTest => go::execute(&test_root, pattern).await,
+        FunctionalRunner::Pytest => pytest::execute(&test_root, pattern).await,
+        FunctionalRunner::NpmTest => npm_test::execute(&test_root, pattern).await,
         FunctionalRunner::MvnTest => mvn::execute(&test_root).await,
         FunctionalRunner::GradleTest => gradle::execute(&test_root).await,
         FunctionalRunner::None => {
-            let metrics = skipped_metrics();
+            let metrics = serde_json::json!({
+                "engine": "functional",
+                "runner": "none",
+                "skipped": true,
+                "passed": false,
+                "noTests": true,
+                "stats": { "passed": 0, "failed": 0, "skipped": 0, "total": 0 },
+            });
             let _ = report::save_engine_report(workspace, "functional", &metrics);
-            return (0, metrics);
+            return (1, metrics);
         }
     };
 
@@ -60,9 +67,9 @@ pub async fn execute(
     (code, metrics)
 }
 
-pub async fn run(workspace: &str, json: bool, quiet: bool) -> i32 {
+pub async fn run(workspace: &str, pattern: Option<&str>, json: bool, quiet: bool) -> i32 {
     let profile = crate::project::detect(workspace);
-    let (code, metrics) = execute(workspace, &profile, None).await;
+    let (code, metrics) = execute(workspace, &profile, pattern).await;
 
     if !quiet {
         if json {
@@ -131,17 +138,6 @@ fn error_metrics(runner: &str, err: &str) -> Value {
     build_metrics(runner, 0, 0, 0, false, Some(err))
 }
 
-fn skipped_metrics() -> Value {
-    serde_json::json!({
-        "engine": "functional",
-        "runner": "none",
-        "skipped": true,
-        "passed": true,
-        "noTests": true,
-        "stats": { "passed": 0, "failed": 0, "skipped": 0, "total": 0 },
-    })
-}
-
 fn normalize_playwright(m: &Value, runner: FunctionalRunner) -> Value {
     let runner = runner.as_str();
     if m.get("error").is_some() {
@@ -156,6 +152,9 @@ fn normalize_playwright(m: &Value, runner: FunctionalRunner) -> Value {
     let mut out = build_metrics(runner, passed, failed, skipped, no_tests, None);
     if let Some(src) = m.get("source") {
         out["source"] = src.clone();
+    }
+    if let Some(fo) = m.get("failureOutput") {
+        out["failureOutput"] = fo.clone();
     }
     out
 }

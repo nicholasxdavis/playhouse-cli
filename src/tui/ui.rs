@@ -1,62 +1,78 @@
 use ratatui::{
-    layout::{Constraint, Layout},
+    layout::Rect,
     style::Style,
-    widgets::Block,
+    widgets::{Block, Clear},
     Frame,
 };
 
 use crate::tui::app::{App, AppMode};
 use crate::tui::components;
-use crate::tui::mascot;
+use crate::tui::layout::{self, MainPanels};
 use crate::tui::theme;
 
 pub fn draw(f: &mut Frame, app: &mut App) {
-    let bg = Block::default().style(Style::default().bg(theme::get_bg_color()));
-    f.render_widget(bg, f.area());
+    let area = f.area();
+    if area.width == 0 || area.height == 0 {
+        return;
+    }
+
+    // Full clear prevents resize ghosting on Windows terminals.
+    f.render_widget(Clear, area);
+    f.render_widget(
+        Block::default().style(Style::default().bg(theme::get_bg_color())),
+        area,
+    );
 
     match app.mode {
         AppMode::HelpMenu => {
-            components::help_menu::render(f, f.area(), app);
+            components::help_menu::render(f, area, app);
             return;
         }
         AppMode::ConfigMenu => {
-            components::config_menu::render(f, f.area(), app);
+            components::config_menu::render(f, area, app);
             return;
         }
         _ => {}
     }
 
-    let area = f.area();
-    if area.width < 20 || area.height < 6 {
+    if layout::is_tiny(area) {
         components::status_bar::render(f, area, app);
+        app.input_pane_area = Rect::default();
+        app.feed_pane_area = Rect::default();
         return;
     }
 
-    let status_h = 1u16;
-    let header_h = mascot::welcome_header_height(&app.workspace)
-        .min(area.height.saturating_sub(8));
-    let max_input = area
-        .height
-        .saturating_sub(header_h + status_h + 2)
-        .clamp(3, 10);
-    let input_height = components::input::block_height(app, area.width, area.height)
-        .min(max_input)
-        .max(3);
+    let panels = layout::split_main(area, app);
+    render_panels(f, app, panels);
+}
 
-    let layout = Layout::vertical([
-        Constraint::Length(header_h),
-        Constraint::Min(1),
-        Constraint::Length(input_height),
-        Constraint::Length(status_h),
-    ])
-    .split(area);
+fn render_panels(f: &mut Frame, app: &mut App, panels: MainPanels) {
+    if panels.header.height > 0 && panels.header.width > 0 {
+        if layout::is_compact(f.area()) {
+            components::welcome::render_compact(f, panels.header, app);
+        } else {
+            components::welcome::render(f, panels.header, app);
+        }
+    }
 
-    components::welcome::render(f, layout[0], app);
-    components::feed::render(f, layout[1], app);
-    components::input::render(f, layout[2], app);
-    app.input_pane_area = layout[2];
-    components::status_bar::render(f, layout[3], app);
+    if panels.feed.height > 0 && panels.feed.width > 0 {
+        components::feed::render(f, panels.feed, app);
+    } else {
+        app.feed_pane_area = Rect::default();
+    }
 
+    if panels.input.height > 0 && panels.input.width > 0 {
+        components::input::render(f, panels.input, app);
+        app.input_pane_area = panels.input;
+    } else {
+        app.input_pane_area = Rect::default();
+    }
+
+    if panels.status.height > 0 {
+        components::status_bar::render(f, panels.status, app);
+    }
+
+    let area = f.area();
     if app.mode == AppMode::SlashMenu {
         components::slash_menu::render(f, area, app);
     }

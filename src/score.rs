@@ -65,6 +65,11 @@ pub fn compute(
 
     for er in engines {
         if er.skipped {
+            if is_implicit_penalty_skip(er) {
+                if let Some(cat) = score_implicit_penalty(er) {
+                    categories.push(cat);
+                }
+            }
             continue;
         }
         match er.engine.as_str() {
@@ -79,8 +84,9 @@ pub fn compute(
     let stars = weighted_stars(&categories);
     let grade = grade_for(stars);
     let why = build_why(&categories, stars);
-    let passed = stars >= settings.star_pass_threshold
-        && engines.iter().all(|e| e.skipped || engine_ok(e));
+    let all_engines_ok = engines.iter().all(|e| e.skipped || engine_ok(e));
+    let meets_threshold = stars >= settings.star_pass_threshold;
+    let passed = meets_threshold && all_engines_ok;
 
     PlayhouseScore {
         stars,
@@ -95,8 +101,18 @@ pub fn compute(
 
 pub const METHODOLOGY: &str = "Playhouse Stars (0-100) combine weighted category scores inspired by Lighthouse. \
 Each engine normalizes to 0-100, then categories are weighted (Trivy 25%, Functional 25%, \
-Arkenar 20%, Lighthouse 20%, Toolchain 10%). Skipped engines are excluded and weights rebalance. \
+Arkenar 20%, Lighthouse 20%, Toolchain 10%). Explicit skips (settings, N/A stack) rebalance weights. \
+Missing or unreachable browser audits score 0/100 without rebalancing. \
 90+ Production Ready, 75+ Good, 60+ Fair, 40+ Needs Work, below 40 Critical.";
+
+pub fn is_implicit_penalty_skip(er: &EngineResult) -> bool {
+    er.skipped
+        && er
+            .metrics
+            .get("implicitPenalty")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+}
 
 fn engine_ok(er: &EngineResult) -> bool {
     if er.exit_code != 0 {
@@ -105,21 +121,34 @@ fn engine_ok(er: &EngineResult) -> bool {
     if er.metrics.get("error").is_some() {
         return false;
     }
-    if er.metrics
-        .get("parseError")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false)
-    {
+    if metrics_flag(er, "parseError") {
         return false;
     }
-    if er.metrics
-        .get("reportParseError")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false)
-    {
+    if metrics_flag(er, "reportParseError") {
+        return false;
+    }
+    if scan_incomplete(er) {
         return false;
     }
     true
+}
+
+fn metrics_flag(er: &EngineResult, key: &str) -> bool {
+    er.metrics
+        .get(key)
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+}
+
+fn scan_incomplete(er: &EngineResult) -> bool {
+    er.metrics
+        .get("scanComplete")
+        .and_then(|v| v.as_bool())
+        == Some(false)
+}
+
+fn engine_failed_scan(er: &EngineResult) -> bool {
+    metrics_flag(er, "reportParseError") || er.metrics.get("error").is_some() || scan_incomplete(er)
 }
 
 fn weighted_stars(categories: &[CategoryScore]) -> u8 {
@@ -281,9 +310,7 @@ fn score_functional(er: &EngineResult) -> CategoryScore {
 }
 
 fn score_arkenar(er: &EngineResult) -> CategoryScore {
-    if er.metrics.get("reportParseError").and_then(|v| v.as_bool()).unwrap_or(false)
-        || er.metrics.get("error").is_some()
-    {
+    if engine_failed_scan(er) {
         let summary = er
             .metrics
             .get("error")
@@ -321,6 +348,24 @@ fn score_arkenar(er: &EngineResult) -> CategoryScore {
 }
 
 fn score_lighthouse(er: &EngineResult, settings: &PlayhouseSettings) -> CategoryScore {
+    let scan_failed = er.metrics.get("error").is_some() || scan_incomplete(er);
+    if scan_failed {
+        let summary = er
+            .metrics
+            .get("error")
+            .and_then(|e| e.as_str())
+            .unwrap_or("Lighthouse scan incomplete")
+            .to_string();
+        return CategoryScore {
+            id: "performance".into(),
+            label: "Performance and UX (Lighthouse)".into(),
+            stars: 0,
+            weight: 0.20,
+            summary,
+            details: vec![],
+            skipped: false,
+        };
+    }
     let scores_json = &er.metrics["scores"];
     let lh = LighthouseScores {
         performance: scores_json["performance"].as_f64(),
@@ -333,7 +378,7 @@ fn score_lighthouse(er: &EngineResult, settings: &PlayhouseSettings) -> Category
         .flatten()
         .collect();
     let stars = if values.is_empty() {
-        if er.exit_code == 0 { 100 } else { 0 }
+        0
     } else {
         let avg = values.iter().sum::<f64>() / values.len() as f64;
         (avg * 100.0).round() as u8
@@ -368,9 +413,62 @@ pub fn skipped_reason(engine: &str, reason: &str) -> EngineResult {
         skipped: true,
         metrics: serde_json::json!({
             "skipped": true,
+            "skipKind": "explicit",
             "reason": reason,
         }),
     }
+}
+
+/// Browser audit skipped (no URL or unreachable). Scores 0/100, weight kept.
+pub fn implicit_penalty(engine: &str, reason: &str) -> EngineResult {
+    EngineResult {
+        engine: engine.into(),
+        exit_code: 0,
+        skipped: true,
+        metrics: serde_json::json!({
+            "skipped": true,
+            "implicitPenalty": true,
+            "skipKind": "implicit",
+            "reason": reason,
+        }),
+    }
+}
+
+/// Browser audit required but did not run. Fails verify.
+pub fn browser_required_failure(engine: &str, reason: &str) -> EngineResult {
+    EngineResult {
+        engine: engine.into(),
+        exit_code: 1,
+        skipped: false,
+        metrics: serde_json::json!({
+            "passed": false,
+            "scanComplete": false,
+            "error": reason,
+            "exitCode": 1,
+        }),
+    }
+}
+
+fn score_implicit_penalty(er: &EngineResult) -> Option<CategoryScore> {
+    let reason = er
+        .metrics
+        .get("reason")
+        .and_then(|r| r.as_str())
+        .unwrap_or("browser audit not run");
+    let (id, label, weight) = match er.engine.as_str() {
+        "arkenar" => ("security_dast", "Security (Arkenar DAST)", 0.20),
+        "lighthouse" => ("performance", "Performance and UX (Lighthouse)", 0.20),
+        _ => return None,
+    };
+    Some(CategoryScore {
+        id: id.into(),
+        label: label.into(),
+        stars: 0,
+        weight,
+        summary: reason.into(),
+        details: vec!["Browser audit did not run; scored 0/100".into()],
+        skipped: false,
+    })
 }
 
 pub fn skipped(engine: &str) -> EngineResult {
@@ -413,6 +511,10 @@ mod tests {
         PlayhouseSettings::default()
     }
 
+    fn is_explicit_skip(er: &EngineResult) -> bool {
+        er.skipped && !is_implicit_penalty_skip(er)
+    }
+
     fn engine(name: &str, exit: i32, metrics: serde_json::Value) -> EngineResult {
         EngineResult {
             engine: name.into(),
@@ -423,7 +525,17 @@ mod tests {
     }
 
     #[test]
-    fn skipped_engines_rebalance_weights() {
+    fn explicit_skip_vs_implicit_penalty() {
+        let explicit = skipped("functional");
+        assert!(is_explicit_skip(&explicit));
+        assert!(!is_implicit_penalty_skip(&explicit));
+        let implicit = implicit_penalty("arkenar", "no-url");
+        assert!(is_implicit_penalty_skip(&implicit));
+        assert!(!is_explicit_skip(&implicit));
+    }
+
+    #[test]
+    fn explicit_skipped_engines_rebalance_weights() {
         let engines = vec![
             skipped("functional"),
             engine(
@@ -443,6 +555,58 @@ mod tests {
         let score = compute(&engines, Some(&doctor), &settings());
         assert!(score.stars > 0);
         assert!(score.passed);
+    }
+
+    #[test]
+    fn implicit_browser_skip_scores_zero_without_rebalance() {
+        let engines = vec![
+            engine(
+                "trivy",
+                0,
+                serde_json::json!({
+                    "summary": { "vulnerabilities": 0, "secrets": 0 },
+                    "passed": true
+                }),
+            ),
+            engine(
+                "functional",
+                0,
+                serde_json::json!({
+                    "runner": "playwright",
+                    "stats": { "passed": 10, "failed": 0, "skipped": 0 }
+                }),
+            ),
+            implicit_penalty("arkenar", "no-url"),
+            implicit_penalty("lighthouse", "no-url"),
+        ];
+        let score = compute(&engines, None, &settings());
+        assert!(score.stars < 75);
+        assert!(!score.passed);
+        let arkenar = score
+            .categories
+            .iter()
+            .find(|c| c.id == "security_dast")
+            .unwrap();
+        assert_eq!(arkenar.stars, 0);
+    }
+
+    #[test]
+    fn lighthouse_empty_scores_not_perfect() {
+        let engines = vec![engine(
+            "lighthouse",
+            0,
+            serde_json::json!({
+                "scanComplete": true,
+                "scores": {}
+            }),
+        )];
+        let score = compute(&engines, None, &settings());
+        let lh = score
+            .categories
+            .iter()
+            .find(|c| c.id == "performance")
+            .unwrap();
+        assert_eq!(lh.stars, 0);
     }
 
     #[test]

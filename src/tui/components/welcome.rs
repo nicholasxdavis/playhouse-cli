@@ -9,6 +9,23 @@ use crate::tui::app::App;
 use crate::tui::mascot;
 use crate::tui::spinner;
 use crate::tui::theme;
+use crate::tui::workspace_status;
+
+/// Single-column header for narrow or short terminals.
+pub fn render_compact(f: &mut Frame, area: Rect, app: &App) {
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(theme::border_focused());
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+    if inner.height == 0 || inner.width == 0 {
+        return;
+    }
+    let ws = workspace_status::load(&app.workspace);
+    let lines = status_lines(app, &ws, inner.width as usize);
+    let take = inner.height as usize;
+    f.render_widget(Paragraph::new(lines.into_iter().take(take).collect::<Vec<_>>()), inner);
+}
 
 pub fn render(f: &mut Frame, area: Rect, app: &App) {
     let block = Block::default()
@@ -28,43 +45,59 @@ pub fn render(f: &mut Frame, area: Rect, app: &App) {
         .map(|line| unicode_width::UnicodeWidthStr::width(line.as_str()))
         .max()
         .unwrap_or(18)
-        .clamp(18, 28) as u16;
+        .clamp(14, 42) as u16;
 
     const MASCOT_LEFT_PAD: u16 = 1;
-    let cols = Layout::horizontal([
-        Constraint::Length(art_width + MASCOT_LEFT_PAD + 2),
-        Constraint::Min(24),
-    ])
-    .split(inner);
+    const MIN_TEXT_COL: u16 = 22;
+    let mascot_col_w = (art_width + MASCOT_LEFT_PAD + 2).min(inner.width.saturating_sub(MIN_TEXT_COL));
 
-    let mascot_cols = Layout::horizontal([
-        Constraint::Length(MASCOT_LEFT_PAD),
-        Constraint::Min(art_width),
-    ])
-    .split(cols[0]);
-
-    let box_height = mascot_cols[1].height as usize;
-    let top_pad = box_height.saturating_sub(art_lines.len()) / 2;
-    let mut char_lines = Vec::new();
-    for _ in 0..top_pad {
-        char_lines.push(Line::from(""));
-    }
-    for line in &art_lines {
-        char_lines.push(Line::from(Span::styled(
-            line.as_str(),
-            theme::accent_bold(),
-        )));
-    }
-
-    f.render_widget(
-        Paragraph::new(char_lines).alignment(Alignment::Center),
-        mascot_cols[1],
-    );
-
-    if cols[1].height < 2 {
+    // Not enough room for mascot + text: text only.
+    if mascot_col_w < art_width.saturating_add(2) || inner.width < MIN_TEXT_COL + 10 {
+        let ws = workspace_status::load(&app.workspace);
+        let lines = status_lines(app, &ws, inner.width as usize);
+        let take = inner.height as usize;
+        f.render_widget(Paragraph::new(lines.into_iter().take(take).collect::<Vec<_>>()), inner);
         return;
     }
 
+    let cols = Layout::horizontal([
+        Constraint::Length(mascot_col_w),
+        Constraint::Min(MIN_TEXT_COL),
+    ])
+    .split(inner);
+
+    if cols[0].width > 0 && cols[0].height > 0 {
+        let mascot_cols = Layout::horizontal([
+            Constraint::Length(MASCOT_LEFT_PAD),
+            Constraint::Min(1),
+        ])
+        .split(cols[0]);
+
+        let char_lines: Vec<Line> = art_lines
+            .iter()
+            .map(|line| Line::from(Span::styled(line.as_str(), theme::mascot_art())))
+            .collect();
+
+        f.render_widget(
+            Paragraph::new(char_lines).alignment(Alignment::Center),
+            mascot_cols[1],
+        );
+    }
+
+    if cols[1].height < 1 || cols[1].width < 1 {
+        return;
+    }
+
+    let ws = workspace_status::load(&app.workspace);
+    let status = status_lines(app, &ws, cols[1].width as usize);
+    let take = cols[1].height as usize;
+    f.render_widget(
+        Paragraph::new(status.into_iter().take(take).collect::<Vec<_>>()),
+        cols[1],
+    );
+}
+
+fn status_lines(app: &App, ws: &workspace_status::WorkspaceStatus, width: usize) -> Vec<Line<'static>> {
     let pass = app.tools_summary.clone();
     let task_label = if app.is_busy() {
         let spin = spinner::frame(app.tick_count);
@@ -84,6 +117,8 @@ pub fn render(f: &mut Frame, area: Rect, app: &App) {
         .unwrap_or("no dev server detected");
 
     let ws_cfg = crate::workspace::load_workspace_config(&app.workspace);
+    let path_budget = width.saturating_sub(14).max(8);
+
     let mut lines = vec![
         Line::from(vec![
             Span::styled("Playhouse", theme::accent_bold()),
@@ -95,46 +130,54 @@ pub fn render(f: &mut Frame, area: Rect, app: &App) {
         Line::from(vec![
             Span::styled("  workspace  ", theme::text_muted()),
             Span::styled(
-                truncate_path(&app.workspace, cols[1].width as usize / 2),
+                truncate_path(&app.workspace, path_budget),
                 theme::text(),
             ),
         ]),
         Line::from(vec![
             Span::styled("  verify URL ", theme::text_muted()),
-            Span::styled(server, theme::accent()),
-        ]),
-        Line::from(vec![
-            Span::styled("  /help", theme::accent()),
-            Span::styled(" commands · ", theme::text_dim()),
-            Span::styled("/", theme::accent()),
-            Span::styled(" slash · ", theme::text_dim()),
-            Span::styled("@", theme::accent()),
-            Span::styled(" files · ", theme::text_dim()),
-            Span::styled("Enter", theme::accent()),
-            Span::styled(" notes", theme::text_dim()),
+            Span::styled(
+                truncate_path(server, path_budget),
+                theme::accent(),
+            ),
         ]),
     ];
+
+    if let (Some(stars), Some(run)) = (ws.last_stars, ws.last_run.clone()) {
+        let grade = ws.last_grade.clone().unwrap_or_else(|| "—".into());
+        lines.push(Line::from(vec![
+            Span::styled("  last score ", theme::text_muted()),
+            Span::styled(format!("{stars}★ {grade}"), theme::accent_bold()),
+            Span::styled(format!(" · {run}"), theme::text_dim()),
+        ]));
+    } else {
+        lines.push(Line::from(vec![
+            Span::styled("  last score ", theme::text_muted()),
+            Span::styled("none · run ", theme::text_dim()),
+            Span::styled("/verify", theme::accent()),
+        ]));
+    }
+
+    lines.push(Line::from(vec![
+        Span::styled("  /help", theme::accent()),
+        Span::styled(" · ", theme::text_dim()),
+        Span::styled("/", theme::accent()),
+        Span::styled(" · ", theme::text_dim()),
+        Span::styled("@", theme::accent()),
+        Span::styled(" · ", theme::text_dim()),
+        Span::styled("Enter", theme::accent()),
+        Span::styled(" notes", theme::text_dim()),
+    ]));
 
     if !ws_cfg.initialized {
         lines.push(Line::from(vec![
             Span::styled("  tip ", theme::text_muted()),
             Span::styled("/init", theme::accent_bold()),
-            Span::styled(" to set up .playhouse/", theme::text_muted()),
+            Span::styled(" for .playhouse/", theme::text_muted()),
         ]));
     }
 
-    let avail = cols[1].height as usize;
-    for (i, line) in lines.into_iter().take(avail).enumerate() {
-        f.render_widget(
-            Paragraph::new(line),
-            Rect {
-                x: cols[1].x,
-                y: cols[1].y + i as u16,
-                width: cols[1].width,
-                height: 1,
-            },
-        );
-    }
+    lines
 }
 
 fn truncate_path(path: &str, max: usize) -> String {

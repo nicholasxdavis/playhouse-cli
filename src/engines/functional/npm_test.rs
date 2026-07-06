@@ -5,41 +5,54 @@ use crate::engines::functional::{build_metrics, resolve_exit_code};
 use crate::pkgmgr::PackageManager;
 use crate::tools;
 
-pub async fn execute(workspace: &str) -> (i32, serde_json::Value) {
+pub async fn execute(workspace: &str, pattern: Option<&str>) -> (i32, serde_json::Value) {
     let settings = load_settings();
     let pm = PackageManager::resolve(workspace, &settings.package_manager);
     let root = Path::new(workspace);
 
     if let Some(pkg) = read_package_json(root) {
         if has_dep(&pkg, "vitest") {
-            return run_vitest(workspace, &pm).await;
+            return run_vitest(workspace, &pm, pattern).await;
         }
         if has_dep(&pkg, "jest") || has_dep(&pkg, "@jest/core") {
-            return run_jest(workspace, &pm).await;
+            return run_jest(workspace, &pm, pattern).await;
         }
     }
 
-    run_npm_test(workspace, &pm).await
+    run_npm_test(workspace, &pm, pattern).await
 }
 
-async fn run_vitest(workspace: &str, pm: &PackageManager) -> (i32, serde_json::Value) {
+async fn run_vitest(
+    workspace: &str,
+    pm: &PackageManager,
+    pattern: Option<&str>,
+) -> (i32, serde_json::Value) {
     let report_path = tools::playhouse_dir(workspace).join("reports").join("vitest.json");
     let _ = std::fs::create_dir_all(report_path.parent().unwrap());
 
+    let output_file = format!("--outputFile={}", report_path.display());
+    let mut args = vec!["run", "--reporter=json", &output_file];
+    if let Some(p) = pattern {
+        args.push(p);
+    }
+
     let out = pm
-        .exec(
-            Path::new(workspace),
-            "vitest",
-            &[
-                "run",
-                "--reporter=json",
-                &format!("--outputFile={}", report_path.display()),
-            ],
-        )
+        .exec(Path::new(workspace), "vitest", &args)
         .await;
 
     match out {
-        Ok(o) => parse_vitest_report(&report_path, o.status.code().unwrap_or(1)).await,
+        Ok(o) => {
+            let stdout = String::from_utf8_lossy(&o.stdout);
+            let stderr = String::from_utf8_lossy(&o.stderr);
+            let (code, metrics) =
+                parse_vitest_report(&report_path, o.status.code().unwrap_or(1)).await;
+            (
+                code,
+                crate::engines::metrics_util::attach_failure_output(
+                    metrics, code, &stdout, &stderr,
+                ),
+            )
+        }
         Err(e) => (
             5,
             build_metrics("npm-test", 0, 0, 0, false, Some(&e)),
@@ -64,31 +77,42 @@ async fn parse_vitest_report(path: &Path, exit: i32) -> (i32, serde_json::Value)
     };
     let passed = v["numPassedTests"].as_u64().unwrap_or(0);
     let failed = v["numFailedTests"].as_u64().unwrap_or(0);
-    let skipped = v["numPendingTests"].as_u64().unwrap_or(0);
-    let no_tests = passed == 0 && failed == 0 && skipped == 0;
+    let skipped = 0;
+    let no_tests = passed == 0 && failed == 0;
     let code = resolve_exit_code(passed, failed, no_tests, exit, false);
     let metrics = build_metrics("npm-test", passed, failed, skipped, no_tests, None);
     (code, metrics)
 }
 
-async fn run_jest(workspace: &str, pm: &PackageManager) -> (i32, serde_json::Value) {
+async fn run_jest(
+    workspace: &str,
+    pm: &PackageManager,
+    pattern: Option<&str>,
+) -> (i32, serde_json::Value) {
     let report_path = tools::playhouse_dir(workspace).join("reports").join("jest.json");
     let _ = std::fs::create_dir_all(report_path.parent().unwrap());
 
-    let out = pm
-        .exec(
-            Path::new(workspace),
-            "jest",
-            &[
-                "--json",
-                &format!("--outputFile={}", report_path.display()),
-                "--passWithNoTests",
-            ],
-        )
-        .await;
+    let output_file = format!("--outputFile={}", report_path.display());
+    let mut args = vec!["--json", &output_file, "--passWithNoTests"];
+    if let Some(p) = pattern {
+        args.push(p);
+    }
+
+    let out = pm.exec(Path::new(workspace), "jest", &args).await;
 
     match out {
-        Ok(o) => parse_jest_report(&report_path, o.status.code().unwrap_or(1)).await,
+        Ok(o) => {
+            let stdout = String::from_utf8_lossy(&o.stdout);
+            let stderr = String::from_utf8_lossy(&o.stderr);
+            let (code, metrics) =
+                parse_jest_report(&report_path, o.status.code().unwrap_or(1)).await;
+            (
+                code,
+                crate::engines::metrics_util::attach_failure_output(
+                    metrics, code, &stdout, &stderr,
+                ),
+            )
+        }
         Err(e) => (
             5,
             build_metrics("npm-test", 0, 0, 0, false, Some(&e)),
@@ -113,24 +137,37 @@ async fn parse_jest_report(path: &Path, exit: i32) -> (i32, serde_json::Value) {
     };
     let passed = v["numPassedTests"].as_u64().unwrap_or(0);
     let failed = v["numFailedTests"].as_u64().unwrap_or(0);
-    let skipped = v["numPendingTests"].as_u64().unwrap_or(0);
-    let no_tests = passed == 0 && failed == 0 && skipped == 0;
+    let skipped = 0;
+    let no_tests = passed == 0 && failed == 0;
     let code = resolve_exit_code(passed, failed, no_tests, exit, false);
     let metrics = build_metrics("npm-test", passed, failed, skipped, no_tests, None);
     (code, metrics)
 }
 
-async fn run_npm_test(workspace: &str, pm: &PackageManager) -> (i32, serde_json::Value) {
-    match pm.run_test_script(Path::new(workspace)).await {
+async fn run_npm_test(
+    workspace: &str,
+    pm: &PackageManager,
+    pattern: Option<&str>,
+) -> (i32, serde_json::Value) {
+    let cwd = Path::new(workspace);
+    let out = if let Some(p) = pattern {
+        pm.run_test_script_with(cwd, &[p]).await
+    } else {
+        pm.run_test_script(cwd).await
+    };
+    match out {
         Ok(o) => {
+            let stdout = String::from_utf8_lossy(&o.stdout);
+            let stderr = String::from_utf8_lossy(&o.stderr);
             let exit = o.status.code().unwrap_or(1);
-            if exit == 0 {
-                let metrics = build_metrics("npm-test", 1, 0, 0, false, None);
-                (0, metrics)
-            } else {
-                let metrics = build_metrics("npm-test", 0, 1, 0, false, None);
-                (1, metrics)
-            }
+            let code = if exit == 0 { 0 } else { 1 };
+            let metrics = build_metrics("npm-test", 0, 0, 0, false, None);
+            (
+                code,
+                crate::engines::metrics_util::attach_failure_output(
+                    metrics, code, &stdout, &stderr,
+                ),
+            )
         }
         Err(e) => (
             5,

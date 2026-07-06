@@ -89,7 +89,34 @@ impl PackageManager {
         }
     }
 
-    pub async fn install(&self, cwd: &Path) -> Result<(), String> {
+    pub async fn install_resilient(&self, cwd: &Path) -> Result<(), String> {
+        const MAX: u32 = 3;
+        let mut last = String::new();
+        for attempt in 1..=MAX {
+            match self.install_inner(cwd).await {
+                Ok(()) => return Ok(()),
+                Err(e) => {
+                    last = e.clone();
+                    if is_fs_lock_error(&e) && node_modules_usable(cwd) {
+                        eprintln!(
+                            "[!] {} install blocked by file lock; reusing existing node_modules",
+                            self.label()
+                        );
+                        return Ok(());
+                    }
+                    if attempt < MAX && is_fs_lock_error(&e) {
+                        tokio::time::sleep(std::time::Duration::from_millis(400 * attempt as u64))
+                            .await;
+                        continue;
+                    }
+                    return Err(e);
+                }
+            }
+        }
+        Err(last)
+    }
+
+    async fn install_inner(&self, cwd: &Path) -> Result<(), String> {
         let out = match self {
             Self::Npm => async_cmd(self.program())
                 .args(["install", "--no-fund", "--no-audit"])
@@ -178,12 +205,20 @@ impl PackageManager {
     }
 
     pub async fn run_test_script(&self, cwd: &Path) -> Result<Output, String> {
-        async_cmd(self.program())
-            .arg("test")
-            .current_dir(cwd)
-            .output()
-            .await
-            .map_err(|e| e.to_string())
+        self.run_test_script_with(cwd, &[]).await
+    }
+
+    pub async fn run_test_script_with(
+        &self,
+        cwd: &Path,
+        extra: &[&str],
+    ) -> Result<Output, String> {
+        let mut cmd = async_cmd(self.program());
+        cmd.arg("test").current_dir(cwd);
+        if !extra.is_empty() {
+            cmd.arg("--").args(extra);
+        }
+        cmd.output().await.map_err(|e| e.to_string())
     }
 
     pub fn path_env(npm_dir: &Path) -> String {
@@ -230,5 +265,38 @@ fn stderr_or_stdout(out: &Output) -> String {
             .next()
             .unwrap_or("command failed")
             .to_string()
+    }
+}
+
+pub fn is_fs_lock_error(err: &str) -> bool {
+    let e = err.to_uppercase();
+    e.contains("EPERM")
+        || e.contains("EBUSY")
+        || e.contains("EACCES")
+        || e.contains("PERMISSION DENIED")
+        || e.contains("ACCESS IS DENIED")
+        || e.contains("RESOURCE TEMPORARILY UNAVAILABLE")
+        || e.contains("THE PROCESS CANNOT ACCESS THE FILE")
+}
+
+fn node_modules_usable(cwd: &Path) -> bool {
+    let nm = cwd.join("node_modules");
+    if nm.join(".bin").is_dir() {
+        return true;
+    }
+    std::fs::read_dir(&nm)
+        .map(|d| d.take(5).count() >= 3)
+        .unwrap_or(false)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn detects_windows_lock_errors() {
+        assert!(is_fs_lock_error("npm ERR! EPERM: operation not permitted"));
+        assert!(is_fs_lock_error("EBUSY: resource temporarily unavailable"));
+        assert!(!is_fs_lock_error("package not found"));
     }
 }
