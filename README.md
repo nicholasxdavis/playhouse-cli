@@ -116,6 +116,6 @@ playhouse config set package_manager pnpm
 
 ## License
 
-MIT - see [LICENSE](LICENSE).
+MIT see [LICENSE](LICENSE).
 
 
