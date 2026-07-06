@@ -17,20 +17,24 @@ pub struct SlashCommand {
 
 pub fn default_slash_commands() -> Vec<SlashCommand> {
     vec![
-        ("/doctor", "Check installed QA tools"),
-        ("/install", "Install Playwright + Trivy automatically"),
-        ("/init", "Initialize .playhouse/ workspace"),
-        ("/verify", "Run full verification suite"),
-        ("/score", "Playhouse Star Rating audit (0–100)"),
+        ("/doctor", "Tool health (/doctor resolve rebuilds native deps)"),
+        ("/install", "Install bundled tools (Trivy, Arkenar, Playwright)"),
+        ("/init", "Initialize .playhouse/ (--no-skill, --stay-on-track)"),
+        ("/verify", "Full QA suite (optional URL: /verify http://localhost:3000)"),
+        ("/score", "Star audit (/score last = saved; /score [url] = audit only)"),
+        ("/functional", "Run detected functional test runner"),
         ("/lighthouse", "Performance & accessibility audit"),
-        ("/playwright", "Run functional tests"),
+        ("/playwright", "Browser E2E tests (Playwright only)"),
         ("/trivy", "Security & secret scan"),
-        ("/arkenar", "DAST web security scan (replaces ZAP)"),
+        ("/arkenar", "DAST web security scan"),
+        ("/status", "Verify progress (when verify is running)"),
+        ("/upgrade", "Check GitHub and npm for updates"),
+        ("/update", "Apply latest Playhouse release"),
         ("/agents", "Show workspace brief"),
-        ("/agent", "Print full agent manifest (headless)"),
-        ("/skill", "Install .playhouse/SKILL.md for agents"),
+        ("/agent", "Agent manifest (/agent status, handoff, plan, …)"),
+        ("/skill", "Agent skill (/skill install, disable, status)"),
         ("/export", "Export .playhouse/BRIEF.md"),
-        ("/stay-on-track", "Enable stay-on-track skill for agents"),
+        ("/stay-on-track", "Stay-on-track skill (enable, disable, status)"),
         ("/config", "Settings & preferences"),
         ("/help", "Interactive command reference"),
         ("/clear", "Clear the feed"),
@@ -67,14 +71,20 @@ pub enum AppMode {
 
 #[derive(Debug, Clone)]
 pub enum TaskKind {
-    Doctor,
+    Doctor { resolve: bool },
     Install,
-    Init { stay_on_track: bool },
-    Verify,
+    Init {
+        stay_on_track: bool,
+        no_skill: bool,
+    },
+    Verify { url: Option<String> },
+    Score { url: Option<String> },
     Lighthouse { url: String },
     Playwright { pattern: Option<String> },
+    Functional { pattern: Option<String> },
     Trivy,
     Arkenar { url: String },
+    Handoff { url: Option<String> },
 }
 
 pub struct App {
@@ -231,6 +241,21 @@ impl App {
             }
         }
         self.task_feed_idx = Some(self.feed.len());
+        self.feed.push(FeedEntry {
+            role: FeedRole::System,
+            blocks,
+        });
+    }
+
+    /// Replace the active task feed entry with final blocks (spinner → + in place).
+    pub fn finish_task_feed(&mut self, blocks: Vec<ContentBlock>) {
+        self.feed_stick_bottom = true;
+        if let Some(idx) = self.task_feed_idx.take() {
+            if let Some(entry) = self.feed.get_mut(idx) {
+                entry.blocks = blocks;
+                return;
+            }
+        }
         self.feed.push(FeedEntry {
             role: FeedRole::System,
             blocks,

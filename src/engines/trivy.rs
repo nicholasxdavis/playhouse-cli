@@ -6,7 +6,7 @@ use crate::pkgmgr::{self, PackageManager};
 use crate::report;
 use crate::tools;
 use serde_json::{json, Value};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 #[derive(Debug, Clone, Default)]
 pub struct TrivyOptions {
@@ -93,9 +93,7 @@ pub async fn execute(workspace: &str, options: &TrivyOptions) -> (i32, Value) {
             let (vuln_count, secret_count) = count_findings(&trivy_data);
             let incomplete = lockfile_missing && pm_audit.is_none();
             let findings_ok = vuln_count == 0 && secret_count == 0 && !incomplete;
-            let code = if incomplete {
-                4
-            } else if !findings_ok {
+            let code = if incomplete || !findings_ok {
                 4
             } else if tool_exit != 0 {
                 5
@@ -173,7 +171,7 @@ async fn run_trivy_pass(
     scan_dir: &str,
     target: &str,
     severity: &str,
-    cache_dir: &PathBuf,
+    cache_dir: &Path,
     skip_dirs: &[String],
 ) -> Result<(Value, i32), String> {
     let mut cmd = async_cmd(trivy);

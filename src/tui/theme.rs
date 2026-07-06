@@ -135,7 +135,7 @@ pub const ERROR: Color = Color::Rgb(210, 105, 120);
 pub const ACCENT_MUTED: Color = Color::Rgb(100, 175, 195);
 
 pub fn status_busy() -> Style {
-    accent()
+    Style::default().fg(Color::Rgb(140, 190, 210))
 }
 
 pub fn status_accent() -> Style {

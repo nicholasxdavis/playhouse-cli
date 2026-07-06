@@ -40,7 +40,8 @@ use tokio::sync::mpsc;
 
 pub use app::App;
 
-use app::{AppMode, FeedRole, TaskKind};
+use app::{AppMode, TaskKind};
+use crate::workspace;
 use keys::{handle_config_key, handle_help_key, handle_mention_key, handle_normal_key,
            handle_slash_key, is_copy_shortcut, is_paste_shortcut};
 use tasks::{spawn_task, TaskEvent};
@@ -102,13 +103,20 @@ async fn run_inner(workspace: &str) -> io::Result<()> {
         true
     };
 
+    let settings = config::load_settings();
+    workspace::maybe_auto_init(workspace, &settings);
+
     let mut app = App::new(workspace, showed_splash);
     let (task_tx, mut task_rx) = mpsc::unbounded_channel();
     let tick_rate = Duration::from_millis(80);
     let mut needs_redraw = true;
 
     if app.settings.auto_run_doctor_on_start {
-        spawn_task(TaskKind::Doctor, app.workspace.clone(), task_tx.clone());
+        spawn_task(
+            TaskKind::Doctor { resolve: false },
+            app.workspace.clone(),
+            task_tx.clone(),
+        );
     } else if app.settings.auto_install_tools {
         spawn_task(TaskKind::Install, app.workspace.clone(), task_tx.clone());
     }
@@ -122,12 +130,6 @@ async fn run_inner(workspace: &str) -> io::Result<()> {
                     app.busy = true;
                     app.busy_label = label.clone();
                     app.clear_task_feed();
-                    if !label.starts_with("Verify") {
-                        app.push_blocks(
-                            FeedRole::System,
-                            vec![ContentBlock::tool_running("QA", &label)],
-                        );
-                    }
                     needs_redraw = true;
                 }
                 TaskEvent::Progress { label, blocks } => {
@@ -143,19 +145,19 @@ async fn run_inner(workspace: &str) -> io::Result<()> {
                 } => {
                     app.busy = false;
                     app.busy_label.clear();
-                    app.clear_task_feed();
                     for block in &mut blocks {
                         if let ContentBlock::ScoreReport { reveal_tick, .. } = block {
                             *reveal_tick = app.tick_count;
                         }
                     }
-                    app.push_blocks(FeedRole::System, blocks);
+                    let already_shows_failure = blocks_show_failure(&blocks);
+                    app.finish_task_feed(blocks);
                     if let Some((pass, total)) = doctor_stats {
                         app.set_doctor_stats(pass, total);
                     }
-                    if !success {
+                    if !success && !already_shows_failure {
                         app.push_system(&format!("✗ {summary}"));
-                    } else if app.settings.bell_enabled {
+                    } else if success && app.settings.bell_enabled {
                         let _ = crossterm::execute!(io::stdout(), crossterm::style::Print("\x07"));
                     }
                     if app.settings.auto_export_agent_brief {
@@ -171,7 +173,7 @@ async fn run_inner(workspace: &str) -> io::Result<()> {
         }
 
         // Refresh dev-server URL at most every 30s (never on resize — port probe blocks for seconds).
-        if app.tick_count % 375 == 0 && app.tick_count > 0 {
+        if app.tick_count.is_multiple_of(375) && app.tick_count > 0 {
             app.refresh_local_server();
             needs_redraw = true;
         }
@@ -241,4 +243,21 @@ async fn run_inner(workspace: &str) -> io::Result<()> {
     terminal.show_cursor()?;
     println!("\n  Thanks for using Playhouse. Run `playhouse` anytime.\n");
     Ok(())
+}
+
+fn blocks_show_failure(blocks: &[ContentBlock]) -> bool {
+    use ui_blocks::ToolStatus;
+    blocks.iter().any(|b| match b {
+        ContentBlock::ToolCall {
+            status: ToolStatus::Error,
+            ..
+        } => true,
+        ContentBlock::ScoreReport { score, .. } => !score.passed,
+        ContentBlock::TodoList { items, .. } => items.iter().any(|i| {
+            i.detail.as_ref().is_some_and(|d| {
+                d.contains("failed") || d.contains("check failed") || d.contains("vulns")
+            })
+        }),
+        _ => false,
+    })
 }

@@ -511,7 +511,7 @@ pub fn check_native_bindings(workspace: &str) -> HealthCheck {
     let dep_count = deps.len();
     let mut failures = Vec::new();
     for dep in &deps {
-        if let Some(err) = probe_native_module(&scan, &dep) {
+        if let Some(err) = probe_native_module(&scan, dep) {
             failures.push(format!("{dep}: {err}"));
         }
     }
@@ -704,6 +704,27 @@ pub fn run_doctor(workspace: &str) -> Vec<HealthCheck> {
     }
 
     checks
+}
+
+/// Rebuild native Node bindings in the project scan root (`npm rebuild`, etc.).
+pub async fn resolve_native_bindings(workspace: &str) -> Option<String> {
+    let scan = crate::workspace::scan_root(workspace);
+    if !scan.join("package.json").is_file() {
+        return None;
+    }
+    let settings = crate::config::load_settings();
+    let pm = crate::pkgmgr::PackageManager::resolve(workspace, &settings.package_manager);
+    let out = crate::cmd::r#async(pm.program())
+        .arg("rebuild")
+        .current_dir(&scan)
+        .output()
+        .await
+        .ok()?;
+    if out.status.success() {
+        Some(format!("{} rebuild completed", pm.label()))
+    } else {
+        None
+    }
 }
 
 #[cfg(test)]

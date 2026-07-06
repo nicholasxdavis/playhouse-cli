@@ -2,10 +2,12 @@ use std::collections::HashMap;
 
 use tokio::sync::mpsc;
 
+use crate::agent;
 use crate::audit::{self, AuditProgress};
 use crate::config::load_settings;
 use crate::detect;
 use crate::install;
+use crate::project;
 use crate::score::PlayhouseScore;
 use crate::tui::app::TaskKind;
 use crate::tui::ui_blocks::{ContentBlock, TodoItem, TodoStatus};
@@ -37,20 +39,27 @@ pub fn spawn_task(
         let _ = tx.send(TaskEvent::Started { label: label.clone() });
 
         let (blocks, success, summary, doctor_stats) = match kind {
-            TaskKind::Doctor => {
-                let r = run_doctor(&workspace_path).await;
+            TaskKind::Doctor { resolve } => {
+                let r = run_doctor(&workspace_path, resolve, tx.clone()).await;
                 (r.0, r.1, r.2, r.3)
             }
             TaskKind::Install => {
-                let r = run_install(&workspace_path).await;
+                let r = run_install(&workspace_path, tx.clone()).await;
                 (r.0, r.1, r.2, None)
             }
-            TaskKind::Init { stay_on_track } => {
-                let r = run_init(&workspace_path, stay_on_track).await;
+            TaskKind::Init {
+                stay_on_track,
+                no_skill,
+            } => {
+                let r = run_init(&workspace_path, stay_on_track, no_skill, tx.clone()).await;
                 (r.0, r.1, r.2, None)
             }
-            TaskKind::Verify => {
-                let r = run_verify_task(&workspace_path, tx.clone()).await;
+            TaskKind::Verify { url } => {
+                let r = run_verify_task(&workspace_path, url, tx.clone()).await;
+                (r.0, r.1, r.2, None)
+            }
+            TaskKind::Score { url } => {
+                let r = run_score_task(&workspace_path, url, tx.clone()).await;
                 (r.0, r.1, r.2, None)
             }
             TaskKind::Lighthouse { url } => {
@@ -61,12 +70,20 @@ pub fn spawn_task(
                 let r = run_playwright(&workspace_path, pattern.as_deref(), tx.clone()).await;
                 (r.0, r.1, r.2, None)
             }
+            TaskKind::Functional { pattern } => {
+                let r = run_functional(&workspace_path, pattern.as_deref(), tx.clone()).await;
+                (r.0, r.1, r.2, None)
+            }
             TaskKind::Trivy => {
                 let r = run_trivy(&workspace_path, tx.clone()).await;
                 (r.0, r.1, r.2, None)
             }
             TaskKind::Arkenar { url } => {
                 let r = run_arkenar(&workspace_path, &url, tx.clone()).await;
+                (r.0, r.1, r.2, None)
+            }
+            TaskKind::Handoff { url } => {
+                let r = run_handoff_task(&workspace_path, url, tx.clone()).await;
                 (r.0, r.1, r.2, None)
             }
         };
@@ -82,14 +99,17 @@ pub fn spawn_task(
 
 fn task_label(kind: &TaskKind) -> String {
     match kind {
-        TaskKind::Doctor => "Checking tools…".into(),
+        TaskKind::Doctor { .. } => "Checking tools…".into(),
         TaskKind::Install => "Installing Playwright, Trivy, Arkenar…".into(),
         TaskKind::Init { .. } => "Initializing workspace…".into(),
-        TaskKind::Verify => "Verify · QA Suite".into(),
+        TaskKind::Verify { .. } => "Verify · QA Suite".into(),
+        TaskKind::Score { .. } => "Playhouse Stars · score audit".into(),
         TaskKind::Lighthouse { .. } => "Lighthouse audit…".into(),
         TaskKind::Playwright { .. } => "Playwright tests…".into(),
+        TaskKind::Functional { .. } => "Functional tests…".into(),
         TaskKind::Trivy => "Trivy security scan…".into(),
         TaskKind::Arkenar { .. } => "Arkenar DAST scan…".into(),
+        TaskKind::Handoff { .. } => "Agent handoff · verify + export".into(),
     }
 }
 
@@ -195,10 +215,11 @@ impl VerifyTracker {
 
 async fn run_verify_task(
     workspace: &str,
+    url_override: Option<String>,
     tx: mpsc::UnboundedSender<TaskEvent>,
-) -> (Vec<ContentBlock>, bool, String) {
+) -> (Vec<ContentBlock>, bool, String, audit::AuditReport) {
     let settings = load_settings();
-    let url = workspace::resolve_verify_url(workspace, &settings);
+    let url = url_override.or_else(|| workspace::resolve_verify_url(workspace, &settings));
     let mut tracker = VerifyTracker::new();
     send_progress(&tx, "Verify · QA Suite", tracker.blocks());
 
@@ -275,10 +296,81 @@ async fn run_verify_task(
         ),
     ];
 
+    (blocks, success, summary, report)
+}
+
+async fn run_score_task(
+    workspace: &str,
+    url_override: Option<String>,
+    tx: mpsc::UnboundedSender<TaskEvent>,
+) -> (Vec<ContentBlock>, bool, String) {
+    send_progress(
+        &tx,
+        "Playhouse Stars · score audit",
+        vec![ContentBlock::tool_running("Score", "Running star rating audit")],
+    );
+    let settings = load_settings();
+    let url = url_override.or_else(|| workspace::resolve_verify_url(workspace, &settings));
+    let report = audit::run_audit(workspace, url.as_deref(), &settings, true, None).await;
+    let success = report.exit_code == 0;
+    let score = &report.score;
+    let summary = if success {
+        format!("Score audit — {} / 100 stars ({})", score.stars, score.grade)
+    } else {
+        format!(
+            "Score audit failed — {} / 100 stars ({}) · exit {}",
+            score.stars, score.grade, report.exit_code
+        )
+    };
+    let blocks = vec![ContentBlock::score_report(
+        PlayhouseScore {
+            stars: score.stars,
+            grade: score.grade.clone(),
+            grade_emoji: score.grade_emoji.clone(),
+            passed: score.passed,
+            categories: score.categories.clone(),
+            why: score.why.clone(),
+            methodology: score.methodology.clone(),
+        },
+        report.exit_code,
+        report.engines.clone(),
+    )];
     (blocks, success, summary)
 }
 
-async fn run_install(workspace: &str) -> (Vec<ContentBlock>, bool, String) {
+async fn run_handoff_task(
+    workspace: &str,
+    url_override: Option<String>,
+    tx: mpsc::UnboundedSender<TaskEvent>,
+) -> (Vec<ContentBlock>, bool, String) {
+    let (mut blocks, success, summary, report) =
+        run_verify_task(workspace, url_override, tx.clone()).await;
+    let settings = load_settings();
+    let ws = workspace::load_workspace_config(workspace);
+    let brief = agent::build_brief_text(workspace, &settings, &ws);
+    let brief_path = crate::tools::playhouse_dir(workspace).join("BRIEF.md");
+    let _ = std::fs::write(&brief_path, brief);
+    let agent_path = agent::save_handoff_json(workspace, &settings, Some(&report))
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_else(|_| ".playhouse/AGENT.json".into());
+    blocks.push(ContentBlock::text(format!(
+        "Handoff exported\n  Brief: {}\n  Agent: {agent_path}",
+        brief_path.display()
+    )));
+    let summary = if success {
+        format!("Handoff complete — {summary}")
+    } else {
+        format!("Handoff finished with failures — {summary}")
+    };
+    (blocks, success, summary)
+}
+
+async fn run_install(workspace: &str, tx: mpsc::UnboundedSender<TaskEvent>) -> (Vec<ContentBlock>, bool, String) {
+    send_progress(
+        &tx,
+        "Installing bundled tools…",
+        vec![ContentBlock::tool_running("Install", "Installing Trivy, Playwright, Arkenar…")],
+    );
     let report = install::ensure_all(workspace, true).await;
     let ok = report.errors.is_empty();
     let mut items = Vec::new();
@@ -287,48 +379,48 @@ async fn run_install(workspace: &str) -> (Vec<ContentBlock>, bool, String) {
             "Trivy — {}",
             if report.trivy { "installed" } else { "failed" }
         ),
-        status: if report.trivy {
-            TodoStatus::Done
+        status: TodoStatus::Done,
+        detail: if report.trivy {
+            None
         } else {
-            TodoStatus::Active
+            Some("installation failed".into())
         },
-        detail: None,
     });
     items.push(TodoItem {
         text: format!(
             "Playwright — {}",
             if report.playwright { "installed" } else { "failed" }
         ),
-        status: if report.playwright {
-            TodoStatus::Done
+        status: TodoStatus::Done,
+        detail: if report.playwright {
+            None
         } else {
-            TodoStatus::Active
+            Some("installation failed".into())
         },
-        detail: None,
     });
     items.push(TodoItem {
         text: format!(
             "Lighthouse — {}",
             if report.lighthouse { "installed" } else { "failed" }
         ),
-        status: if report.lighthouse {
-            TodoStatus::Done
+        status: TodoStatus::Done,
+        detail: if report.lighthouse {
+            None
         } else {
-            TodoStatus::Active
+            Some("installation failed".into())
         },
-        detail: None,
     });
     items.push(TodoItem {
         text: format!(
             "Arkenar — {}",
             if report.arkenar { "installed" } else { "failed" }
         ),
-        status: if report.arkenar {
-            TodoStatus::Done
+        status: TodoStatus::Done,
+        detail: if report.arkenar {
+            None
         } else {
-            TodoStatus::Active
+            Some("installation failed".into())
         },
-        detail: None,
     });
     let summary = if ok {
         "Install complete".into()
@@ -345,9 +437,27 @@ async fn run_install(workspace: &str) -> (Vec<ContentBlock>, bool, String) {
     (blocks, ok, summary)
 }
 
-async fn run_init(workspace: &str, stay_on_track: bool) -> (Vec<ContentBlock>, bool, String) {
+async fn run_init(
+    workspace: &str,
+    stay_on_track: bool,
+    no_skill: bool,
+    tx: mpsc::UnboundedSender<TaskEvent>,
+) -> (Vec<ContentBlock>, bool, String) {
+    send_progress(
+        &tx,
+        "Initializing workspace…",
+        vec![ContentBlock::tool_running("Init", "Creating .playhouse/ workspace")],
+    );
     let settings = load_settings();
-    match workspace::init_workspace(workspace, &settings, true, stay_on_track, true, true).await {
+    match workspace::init_workspace(
+        workspace,
+        &settings,
+        true,
+        stay_on_track,
+        !no_skill,
+        true,
+    )
+    .await {
         Ok(report) => {
             let summary = "Workspace initialized".into();
             let mut blocks = vec![ContentBlock::text(format!(
@@ -370,10 +480,29 @@ async fn run_init(workspace: &str, stay_on_track: bool) -> (Vec<ContentBlock>, b
     }
 }
 
-async fn run_doctor(workspace: &str) -> (Vec<ContentBlock>, bool, String, Option<(usize, usize)>) {
+async fn run_doctor(
+    workspace: &str,
+    resolve: bool,
+    tx: mpsc::UnboundedSender<TaskEvent>,
+) -> (Vec<ContentBlock>, bool, String, Option<(usize, usize)>) {
+    let label = if resolve {
+        "Doctor · resolve native bindings"
+    } else {
+        "Checking tools…"
+    };
+    send_progress(
+        &tx,
+        label,
+        vec![ContentBlock::tool_running("Doctor", "Checking installed QA tools")],
+    );
     let settings = load_settings();
     if settings.auto_install_tools {
-        let _ = install::ensure_all(workspace, true).await;
+        let profile = project::detect(workspace);
+        let _ = install::ensure_profile(workspace, profile.install_profile(), true).await;
+    }
+
+    if resolve {
+        let _ = detect::resolve_native_bindings(workspace).await;
     }
 
     let checks = tokio::task::spawn_blocking({
@@ -390,13 +519,17 @@ async fn run_doctor(workspace: &str) -> (Vec<ContentBlock>, bool, String, Option
         .map(|c| {
             let status = match c.status {
                 CheckStatus::Pass => TodoStatus::Done,
-                CheckStatus::Warn => TodoStatus::Pending,
-                CheckStatus::Fail => TodoStatus::Active,
+                CheckStatus::Warn => TodoStatus::Warn,
+                CheckStatus::Fail => TodoStatus::Done,
             };
             TodoItem {
                 text: format!("{} — {}", c.name, c.detail),
                 status,
-                detail: None,
+                detail: if c.status == CheckStatus::Fail {
+                    Some("check failed".into())
+                } else {
+                    None
+                },
             }
         })
         .collect();
@@ -432,10 +565,43 @@ async fn run_lighthouse(
         format!("Lighthouse failed for {url} (exit {code})")
     };
     (
-        vec![
-            ContentBlock::tool_done("Lighthouse", &summary, success),
-            ContentBlock::text("Run `playhouse lighthouse --json` for score details."),
-        ],
+        vec![ContentBlock::tool_done(
+            "Lighthouse",
+            &summary,
+            success,
+            Some("playhouse lighthouse --json for score details".into()),
+        )],
+        success,
+        summary,
+    )
+}
+
+async fn run_functional(
+    workspace: &str,
+    pattern: Option<&str>,
+    tx: mpsc::UnboundedSender<TaskEvent>,
+) -> (Vec<ContentBlock>, bool, String) {
+    let profile = crate::project::detect(workspace);
+    let runner = profile.functional_runner.as_str();
+    send_progress(
+        &tx,
+        "Functional tests…",
+        vec![ContentBlock::tool_running("Functional", format!("Running {runner}"))],
+    );
+    let code = crate::engines::functional::run(workspace, pattern, true, true).await;
+    let success = code == 0;
+    let summary = if success {
+        format!("Functional tests passed ({runner})")
+    } else {
+        format!("Functional tests failed ({runner}, exit {code})")
+    };
+    (
+        vec![ContentBlock::tool_done(
+            "Functional",
+            &summary,
+            success,
+            Some("playhouse functional --json for full report".into()),
+        )],
         success,
         summary,
     )
@@ -459,10 +625,12 @@ async fn run_playwright(
         format!("Playwright failed (exit {code})")
     };
     (
-        vec![
-            ContentBlock::tool_done("Playwright", &summary, success),
-            ContentBlock::text("Run `playhouse playwright --json` for full report."),
-        ],
+        vec![ContentBlock::tool_done(
+            "Playwright",
+            &summary,
+            success,
+            Some("playhouse playwright --json for full report".into()),
+        )],
         success,
         summary,
     )
@@ -488,10 +656,12 @@ async fn run_arkenar(
         format!("Arkenar failed for {url} (exit {code})")
     };
     (
-        vec![
-            ContentBlock::tool_done("Arkenar", &summary, success),
-            ContentBlock::text("Report: .playhouse/reports/arkenar.json · `playhouse arkenar --json`"),
-        ],
+        vec![ContentBlock::tool_done(
+            "Arkenar",
+            &summary,
+            success,
+            Some(".playhouse/reports/arkenar.json · playhouse arkenar --json".into()),
+        )],
         success,
         summary,
     )
@@ -511,10 +681,12 @@ async fn run_trivy(workspace: &str, tx: mpsc::UnboundedSender<TaskEvent>) -> (Ve
         format!("Trivy findings detected (exit {code})")
     };
     (
-        vec![
-            ContentBlock::tool_done("Trivy", &summary, success),
-            ContentBlock::text("Run `playhouse trivy --json` for full findings."),
-        ],
+        vec![ContentBlock::tool_done(
+            "Trivy",
+            &summary,
+            success,
+            Some("playhouse trivy --json for full findings".into()),
+        )],
         success,
         summary,
     )

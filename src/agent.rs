@@ -117,7 +117,7 @@ pub fn status(workspace: &str) -> Value {
         "toolsWarn": warn,
         "toolsFail": fail,
         "verifyUrl": url,
-        "lastScore": last_score.as_ref().map(|l| score_status_json(l)),
+        "lastScore": last_score.as_ref().map(score_status_json),
         "starPassThreshold": settings.star_pass_threshold,
         "initialized": ws.initialized,
         "nextActions": next_actions(workspace, &settings, &checks, &last_score, &profile),

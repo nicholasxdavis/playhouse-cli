@@ -14,6 +14,7 @@ pub enum TodoStatus {
     Pending,
     Active,
     Done,
+    Warn,
     Skipped,
 }
 
@@ -65,7 +66,12 @@ impl ContentBlock {
         }
     }
 
-    pub fn tool_done(name: impl Into<String>, summary: impl Into<String>, success: bool) -> Self {
+    pub fn tool_done(
+        name: impl Into<String>,
+        summary: impl Into<String>,
+        success: bool,
+        detail: Option<String>,
+    ) -> Self {
         Self::ToolCall {
             name: name.into(),
             status: if success {
@@ -74,7 +80,7 @@ impl ContentBlock {
                 ToolStatus::Error
             },
             summary: summary.into(),
-            detail: None,
+            detail,
         }
     }
 
@@ -175,7 +181,12 @@ fn render_todo_list(title: &str, items: &[TodoItem], max_width: usize, tick: u64
     }
     let done = items
         .iter()
-        .filter(|i| matches!(i.status, TodoStatus::Done | TodoStatus::Skipped))
+        .filter(|i| {
+            matches!(
+                i.status,
+                TodoStatus::Done | TodoStatus::Skipped | TodoStatus::Warn
+            )
+        })
         .count();
     let total = items.len();
     let pct = done as f64 / total as f64;
@@ -200,6 +211,7 @@ fn render_todo_list(title: &str, items: &[TodoItem], max_width: usize, tick: u64
             TodoStatus::Pending => ("o", theme::todo_item_pending()),
             TodoStatus::Active => (spinner::frame(tick), theme::todo_item_active()),
             TodoStatus::Done => ("+", theme::todo_item_done()),
+            TodoStatus::Warn => ("~", theme::status_warn()),
             TodoStatus::Skipped => ("-", theme::todo_item_skipped()),
         };
         let body = text_box::truncate(&item.text, max_width.saturating_sub(10));
@@ -232,11 +244,12 @@ fn todo_detail_style(status: &TodoStatus, detail: &str) -> Style {
     match status {
         TodoStatus::Active => theme::todo_item_active(),
         TodoStatus::Skipped => theme::todo_item_skipped(),
+        TodoStatus::Warn => theme::status_warn(),
         TodoStatus::Done if detail.contains("failed") || detail.contains("vulns") => {
             theme::status_error()
         }
         TodoStatus::Done => theme::system_detail_text(),
-        _ => theme::text_dim(),
+        TodoStatus::Pending => theme::text_dim(),
     }
 }
 

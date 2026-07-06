@@ -130,3 +130,59 @@ fn help_menu_escape_returns_normal() {
     handle_help_key(&mut app, KeyCode::Esc, KeyModifiers::empty(), &tx);
     assert_eq!(app.mode, AppMode::Normal);
 }
+
+#[test]
+fn slash_commands_include_v030_wiring() {
+    let app = test_app();
+    let cmds: Vec<&str> = app.slash_commands.iter().map(|c| c.command.as_str()).collect();
+    for expected in ["/functional", "/status", "/upgrade", "/update", "/agent"] {
+        assert!(cmds.contains(&expected), "missing slash command {expected}");
+    }
+}
+
+fn feed_json_contains(app: &App, needle: &str) -> bool {
+    app.feed.iter().any(|entry| {
+        entry.role == FeedRole::System
+            && entry
+                .blocks
+                .iter()
+                .any(|b| matches!(b, crate::tui::ui_blocks::ContentBlock::Code { content } if content.contains(needle)))
+    })
+}
+
+#[test]
+fn execute_upgrade_emits_json() {
+    let mut app = test_app();
+    let tx = noop_task_tx();
+    execute_command(&mut app, "/upgrade", &tx);
+    assert!(feed_json_contains(&app, "\"current\""));
+}
+
+#[test]
+fn execute_status_emits_json() {
+    let mut app = test_app();
+    let tx = noop_task_tx();
+    execute_command(&mut app, "/status", &tx);
+    assert!(feed_json_contains(&app, "\"command\""));
+}
+
+#[test]
+fn execute_agent_status_emits_json() {
+    let mut app = test_app();
+    let tx = noop_task_tx();
+    execute_command(&mut app, "/agent status", &tx);
+    assert!(feed_json_contains(&app, "nextActions") || feed_json_contains(&app, "workspace"));
+}
+
+#[tokio::test]
+async fn execute_functional_queues_user_command() {
+    let mut app = test_app();
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    execute_command(&mut app, "/functional", &tx);
+    assert!(app.feed.iter().any(|e| e.role == FeedRole::User));
+    let event = tokio::time::timeout(std::time::Duration::from_secs(10), rx.recv())
+        .await
+        .expect("functional task did not start in time")
+        .expect("task channel closed");
+    assert!(matches!(event, TaskEvent::Started { .. }));
+}

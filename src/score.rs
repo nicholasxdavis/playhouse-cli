@@ -487,6 +487,21 @@ pub fn skipped(engine: &str) -> EngineResult {
     skipped_reason(engine, "skipped")
 }
 
+pub fn load_saved_report(workspace: &str) -> Option<(PlayhouseScore, Vec<EngineResult>, i32)> {
+    let path = crate::tools::playhouse_dir(workspace)
+        .join("reports")
+        .join("score.json");
+    let content = std::fs::read_to_string(path).ok()?;
+    let v: serde_json::Value = serde_json::from_str(&content).ok()?;
+    let score: PlayhouseScore = serde_json::from_value(v.get("playhouseScore")?.clone()).ok()?;
+    let engines: Vec<EngineResult> = v
+        .get("engines")
+        .and_then(|e| serde_json::from_value(e.clone()).ok())
+        .unwrap_or_default();
+    let exit_code = if score.passed { 0 } else { 1 };
+    Some((score, engines, exit_code))
+}
+
 pub fn save_report(
     workspace: &str,
     score: &PlayhouseScore,
@@ -684,5 +699,19 @@ mod tests {
             .find(|c| c.id == "functional")
             .unwrap();
         assert_eq!(functional.stars, 100);
+    }
+
+    #[test]
+    fn load_saved_report_roundtrip() {
+        let dir = std::env::temp_dir().join(format!("playhouse-score-load-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join(".playhouse/reports")).unwrap();
+        let ws = dir.to_str().unwrap();
+        let engines = vec![skipped("functional")];
+        let stars = compute(&engines, None, &settings());
+        save_report(ws, &stars, &engines).unwrap();
+        let loaded = load_saved_report(ws).expect("saved report");
+        assert_eq!(loaded.0.stars, stars.stars);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

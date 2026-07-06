@@ -1,12 +1,9 @@
 use crate::cli::context::Context;
 use crate::cli::output;
-use crate::config;
 use crate::detect;
 use crate::install;
-use crate::pkgmgr::PackageManager;
 use crate::project;
 use crate::types::{CheckStatus, HealthCheck};
-use crate::workspace;
 
 pub async fn run(ctx: &Context<'_>, resolve: bool) -> i32 {
     if ctx.settings.auto_install_tools {
@@ -17,7 +14,7 @@ pub async fn run(ctx: &Context<'_>, resolve: bool) -> i32 {
     let mut checks = detect::run_doctor(ctx.workspace);
 
     if resolve {
-        if let Some(msg) = try_resolve_native_bindings(ctx.workspace).await {
+        if let Some(msg) = detect::resolve_native_bindings(ctx.workspace).await {
             checks.push(HealthCheck::pass("Native binding resolve", &msg));
         }
     }
@@ -28,26 +25,6 @@ pub async fn run(ctx: &Context<'_>, resolve: bool) -> i32 {
         1
     } else {
         0
-    }
-}
-
-async fn try_resolve_native_bindings(workspace: &str) -> Option<String> {
-    let scan = workspace::scan_root(workspace);
-    if !scan.join("package.json").is_file() {
-        return None;
-    }
-    let settings = config::load_settings();
-    let pm = PackageManager::resolve(workspace, &settings.package_manager);
-    let out = crate::cmd::r#async(pm.program())
-        .arg("rebuild")
-        .current_dir(&scan)
-        .output()
-        .await
-        .ok()?;
-    if out.status.success() {
-        Some(format!("{} rebuild completed", pm.label()))
-    } else {
-        None
     }
 }
 

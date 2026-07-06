@@ -57,12 +57,12 @@ pub fn render(f: &mut Frame, area: Rect, app: &App) {
             } else {
                 theme::text_muted()
             };
-            let cmd_part = format!("{marker}{}", cmd.command);
-            let cmd_w = text_box::width(&cmd_part);
+            let cmd_part = cmd.command.clone();
+            let cmd_w = text_box::width(&format!("{marker}{cmd_part}"));
             let desc_budget = row_budget.saturating_sub(cmd_w + 1);
             let desc = text_box::truncate(&cmd.description, desc_budget);
             ListItem::new(Line::from(vec![
-                Span::styled(marker, cmd_style),
+                Span::styled(marker, if is_selected { theme::accent() } else { theme::text_dim() }),
                 Span::styled(&cmd.command, cmd_style),
                 Span::styled(" ", Style::default()),
                 Span::styled(desc, desc_style),
