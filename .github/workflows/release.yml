@@ -154,6 +154,8 @@ jobs:
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org
-      - name: Publish to npm (OIDC trusted publishing)
+      - name: Publish to npm
         working-directory: packages/playhouse
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --provenance --access public
