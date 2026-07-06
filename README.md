@@ -196,6 +196,3 @@ playhouse config set package_manager pnpm
 | npm package | https://www.npmjs.com/package/@nicholasxdavis/playhouse-cli |
 | Issues | https://github.com/nicholasxdavis/playhouse-cli/issues |
 
-## License
-
-MIT. See [LICENSE](LICENSE).
