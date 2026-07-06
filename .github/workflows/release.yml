@@ -126,3 +126,19 @@ jobs:
           node-version: 20
       - name: Verify npm package version matches Cargo.toml
         run: node scripts/check-version-sync.js
+
+  npm-publish:
+    needs: npm-version-check
+    runs-on: ubuntu-latest
+    if: ${{ secrets.NPM_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+      - name: Publish @playhouse/cli to npm
+        working-directory: packages/playhouse
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
