@@ -32,7 +32,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     }
 
     let status_h = 1u16;
-    let header_h = area.height.min(6).max(3);
+    let header_h = area.height.clamp(3, 6);
     let max_input = area
         .height
         .saturating_sub(header_h + status_h + 2)

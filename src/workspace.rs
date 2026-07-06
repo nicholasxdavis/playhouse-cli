@@ -352,6 +352,7 @@ pub fn playhouse_skill_status(workspace: &str, settings: &PlayhouseSettings) -> 
 
 fn build_skill_document(workspace: &str, settings: &PlayhouseSettings, project_name: &str) -> String {
     let project_file = project_info_path(workspace, settings);
+    let skill_dir = format!(".playhouse/{}", settings.stay_on_track_skill_dir);
     let footer = format!(
         r#"
 
@@ -392,7 +393,7 @@ playhouse stay-on-track status --json
 | `.playhouse/advisories.log` | Human notes from TUI |
 | `playhouse agent --json` | Machine-readable full reference |
 "#,
-        dir = format!(".playhouse/{}", settings.stay_on_track_skill_dir),
+        dir = skill_dir,
         project_file = project_file.display(),
     );
     format!("{SKILL_TEMPLATE}{footer}")
@@ -478,9 +479,11 @@ pub fn maybe_auto_init(workspace: &str, settings: &PlayhouseSettings) {
     }
     let _ = fs::create_dir_all(dir.join("reports"));
     let _ = fs::create_dir_all(dir.join("tests"));
-    let mut cfg = WorkspaceConfig::default();
-    cfg.initialized = true;
-    cfg.project_name = Some(detect_project_name(workspace));
+    let cfg = WorkspaceConfig {
+        initialized: true,
+        project_name: Some(detect_project_name(workspace)),
+        ..Default::default()
+    };
     let _ = save_workspace_config(workspace, &cfg);
     if settings.playhouse_skill_enabled {
         let _ = install_playhouse_skill(workspace, settings);
@@ -509,9 +512,11 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         let app = dir.join("apps").join("web");
         std::fs::create_dir_all(&app).unwrap();
-        let mut cfg = WorkspaceConfig::default();
-        cfg.scan_root = Some("apps/web".into());
-        cfg.test_root = Some("apps/web".into());
+        let cfg = WorkspaceConfig {
+            scan_root: Some("apps/web".into()),
+            test_root: Some("apps/web".into()),
+            ..Default::default()
+        };
         save_workspace_config(dir.to_str().unwrap(), &cfg).unwrap();
         let roots = resolve_roots(dir.to_str().unwrap());
         assert_eq!(roots.scan, app);

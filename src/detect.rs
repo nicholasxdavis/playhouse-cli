@@ -561,4 +561,39 @@ mod tests {
         assert!(hints.contains(&5199));
         let _ = fs::remove_dir_all(&dir);
     }
+
+    #[test]
+    fn suggested_local_url_uses_first_hint() {
+        let dir = std::env::temp_dir().join(format!("playhouse-url-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(
+            dir.join("package.json"),
+            r#"{"scripts":{"dev":"vite --port 4173"}}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            suggested_local_url(dir.to_str().unwrap()).as_deref(),
+            Some("http://localhost:4173")
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn port_hints_wrangler_toml() {
+        let dir = std::env::temp_dir().join(format!("playhouse-wrangler-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("wrangler.toml"), "port = 8787\n").unwrap();
+        let hints = port_hints(dir.to_str().unwrap());
+        assert!(hints.contains(&8787));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn check_playhouse_install_reports_version() {
+        let check = check_playhouse_install();
+        assert_eq!(check.name, "Playhouse CLI");
+        assert!(check.detail.contains("0.1.0"));
+    }
 }

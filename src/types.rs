@@ -68,6 +68,6 @@ impl LighthouseScores {
     pub fn all_pass(&self, threshold: f64) -> bool {
         [self.performance, self.accessibility, self.best_practices, self.seo]
             .iter()
-            .all(|s| s.map_or(false, |v| v >= threshold))
+            .all(|s| s.is_some_and(|v| v >= threshold))
     }
 }

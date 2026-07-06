@@ -51,6 +51,9 @@ jobs:
       - name: Unit + integration tests
         run: cargo test --target ${{ matrix.target }}
 
+      - name: Clippy (deny warnings)
+        run: cargo clippy --all-targets -- -D warnings
+
   npm-smoke:
     needs: rust
     strategy:

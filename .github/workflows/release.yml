@@ -137,7 +137,7 @@ jobs:
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org
-      - name: Publish @playhouse/cli to npm
+      - name: Publish @nicholasxdavis/playhouse-cli to npm
         working-directory: packages/playhouse
         run: npm publish --access public
         env:

@@ -6,8 +6,8 @@
   <a href="https://github.com/nicholasxdavis/playhouse-cli/actions/workflows/ci.yml?branch=main">
     <img src="https://img.shields.io/github/actions/workflow/status/nicholasxdavis/playhouse-cli/ci.yml?branch=main&style=for-the-badge&label=CI&color=2bba68" alt="CI Status">
   </a>
-  <a href="https://www.npmjs.com/package/@playhouse/cli">
-    <img src="https://img.shields.io/npm/v/@playhouse/cli?style=for-the-badge&label=Version&color=14949c" alt="npm version">
+  <a href="https://www.npmjs.com/package/@nicholasxdavis/playhouse-cli">
+    <img src="https://img.shields.io/npm/v/@nicholasxdavis/playhouse-cli?style=for-the-badge&label=Version&color=14949c" alt="npm version">
   </a>
   <a href="https://github.com/nicholasxdavis/playhouse-cli/releases/tag/v0.1.0">
     <img src="https://img.shields.io/github/v/release/nicholasxdavis/playhouse-cli?style=for-the-badge&label=Release&color=14949c" alt="GitHub Release">
@@ -33,7 +33,7 @@
 **Recommended (Node 18+, no Rust required):**
 
 ```bash
-npm install -g @playhouse/cli
+npm install -g @nicholasxdavis/playhouse-cli
 playhouse install --full   # Trivy, Arkenar, Playwright, Lighthouse, chromium
 playhouse init             # set up .playhouse/ and agent skill
 ```
@@ -41,7 +41,7 @@ playhouse init             # set up .playhouse/ and agent skill
 Dev dependency:
 
 ```bash
-pnpm add -D @playhouse/cli
+pnpm add -D @nicholasxdavis/playhouse-cli
 npx playhouse doctor
 ```
 
@@ -62,8 +62,8 @@ Set `PLAYHOUSE_INSTALL_STRICT=1` to fail `npm install` when tool install fails.
 
 | Method | Command |
 |--------|---------|
-| npm (primary) | `npm i -g @playhouse/cli` |
-| npx | `npx @playhouse/cli init` |
+| npm (primary) | `npm i -g @nicholasxdavis/playhouse-cli` |
+| npx | `npx @nicholasxdavis/playhouse-cli init` |
 | GitHub Release | [v0.1.0 binaries](https://github.com/nicholasxdavis/playhouse-cli/releases/tag/v0.1.0) |
 | cargo (developers) | `cargo install --path . --force` |
 | manual binary | set `PLAYHOUSE_BIN` or `PLAYHOUSE_SKIP_DOWNLOAD=1` |
@@ -183,7 +183,7 @@ playhouse config set package_manager pnpm
 |----------|-----|
 | Repository | https://github.com/nicholasxdavis/playhouse-cli |
 | Release v0.1.0 | https://github.com/nicholasxdavis/playhouse-cli/releases/tag/v0.1.0 |
-| npm package | https://www.npmjs.com/package/@playhouse/cli |
+| npm package | https://www.npmjs.com/package/@nicholasxdavis/playhouse-cli |
 | Issues | https://github.com/nicholasxdavis/playhouse-cli/issues |
 
 ## License

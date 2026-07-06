@@ -1000,7 +1000,7 @@ fn load_advisories(workspace: &str) -> Vec<String> {
     };
     content
         .lines()
-        .filter_map(|line| line.splitn(2, " | ").nth(1).map(str::to_string))
+        .filter_map(|line| line.split_once(" | ").map(|(_, note)| note.to_string()))
         .collect()
 }
 

@@ -1,5 +1,5 @@
 {
-  "name": "@playhouse/cli",
+  "name": "@nicholasxdavis/playhouse-cli",
   "version": "0.1.0",
   "description": "Local QA CLI — security, functional, performance, agent handoff",
   "license": "MIT",

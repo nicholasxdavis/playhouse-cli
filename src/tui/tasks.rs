@@ -150,13 +150,11 @@ impl VerifyTracker {
         }
     }
 
-    fn done(&mut self, id: &'static str, detail: &str, skipped: bool, ok: bool) {
+    fn done(&mut self, id: &'static str, detail: &str, skipped: bool, _ok: bool) {
         if let Some(&idx) = self.labels.get(id) {
             if let Some(item) = self.items.get_mut(idx) {
                 item.status = if skipped {
                     TodoStatus::Skipped
-                } else if ok {
-                    TodoStatus::Done
                 } else {
                     TodoStatus::Done
                 };
@@ -230,13 +228,13 @@ async fn run_verify_task(
             }
             AuditProgress::StepDone {
                 id,
+                label,
                 detail,
                 skipped,
                 ok,
-                ..
             } => {
                 tracker.done(id, &detail, skipped, ok);
-                send_progress(&tx, "Verify · QA Suite", tracker.blocks());
+                send_progress(&tx, &label, tracker.blocks());
             }
             AuditProgress::Computing { label } => {
                 tracker.computing(&label);
@@ -423,7 +421,7 @@ async fn run_lighthouse(
     send_progress(
         &tx,
         "Lighthouse audit…",
-        vec![ContentBlock::tool_running("Lighthouse", &format!("Auditing {url}"))],
+        vec![ContentBlock::tool_running("Lighthouse", format!("Auditing {url}"))],
     );
     let code = crate::engines::lighthouse::run(url, workspace, true, true).await;
     let success = code == 0;
@@ -477,7 +475,7 @@ async fn run_arkenar(
     send_progress(
         &tx,
         "Arkenar DAST scan…",
-        vec![ContentBlock::tool_running("Arkenar", &format!("Scanning {url}"))],
+        vec![ContentBlock::tool_running("Arkenar", format!("Scanning {url}"))],
     );
     let code = crate::engines::arkenar::run(url, workspace, true, true).await;
     let success = code == 0;

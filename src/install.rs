@@ -212,10 +212,10 @@ pub async fn install_web_tools(workspace: &str, quiet: bool) -> Result<Vec<Strin
         .await
         .map_err(|e| format!("{} install failed: {e}", pm.label()))?;
 
-    if !tools::bundled_node_bin(workspace, "playwright").is_some() {
+    if tools::bundled_node_bin(workspace, "playwright").is_none() {
         return Err("@playwright/test missing after install".into());
     }
-    if !tools::bundled_node_bin(workspace, "lighthouse").is_some() {
+    if tools::bundled_node_bin(workspace, "lighthouse").is_none() {
         return Err("lighthouse missing after install".into());
     }
 
@@ -324,7 +324,7 @@ fn arkenar_download_spec() -> Result<(String, String, ArchiveKind), String> {
     {
         Ok((
             format!("{base}/arkenar-windows-amd64.zip"),
-            format!("arkenar-windows-amd64.zip"),
+            "arkenar-windows-amd64.zip".to_string(),
             ArchiveKind::Zip,
         ))
     }
@@ -387,6 +387,7 @@ fn playhouse_home_cache() -> std::path::PathBuf {
 #[derive(Clone, Copy)]
 enum ArchiveKind {
     Zip,
+    #[allow(dead_code)]
     TarGz,
 }
 
@@ -486,7 +487,7 @@ fn download_file(url: &str, dest: &Path) -> Result<(), String> {
         if !out.status.success() {
             return Err(String::from_utf8_lossy(&out.stderr).trim().to_string());
         }
-        return Ok(());
+        Ok(())
     }
     #[cfg(not(windows))]
     {

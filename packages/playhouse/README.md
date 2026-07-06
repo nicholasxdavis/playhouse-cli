@@ -1,4 +1,4 @@
-# @playhouse/cli
+# @nicholasxdavis/playhouse-cli
 
 npm installer and launcher for the [Playhouse](https://github.com/nicholasxdavis/playhouse-cli) Rust CLI. `postinstall` downloads the native binary from [GitHub Releases](https://github.com/nicholasxdavis/playhouse-cli/releases) for your OS and CPU.
 
@@ -7,7 +7,7 @@ npm installer and launcher for the [Playhouse](https://github.com/nicholasxdavis
 ## Install
 
 ```bash
-npm install -g @playhouse/cli
+npm install -g @nicholasxdavis/playhouse-cli
 playhouse install --full
 playhouse init
 ```
@@ -15,7 +15,7 @@ playhouse init
 Project dev dependency:
 
 ```bash
-pnpm add -D @playhouse/cli
+pnpm add -D @nicholasxdavis/playhouse-cli
 npx playhouse doctor
 ```
 
@@ -45,8 +45,6 @@ node bin/playhouse.js --version
 
 1. Sync version in `Cargo.toml` and `package.json` (`node scripts/check-version-sync.js`).
 2. Tag and push: `git tag v0.1.0 && git push origin v0.1.0` (GitHub Actions uploads binaries).
-3. Create the `@playhouse` npm org at https://www.npmjs.com/org/create if needed.
-4. `npm login`
-5. `cd packages/playhouse && npm publish --access public`
+3. `cd packages/playhouse && npm publish --access public`
 
 The `playhouse` command name is unchanged after install (see `bin` in `package.json`).

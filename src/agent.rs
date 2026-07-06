@@ -121,7 +121,7 @@ pub fn build_handoff_json(
     let ws = workspace::load_workspace_config(workspace);
     let profile = project::detect(workspace);
     let checks = detect::run_doctor(workspace);
-    let url = workspace::resolve_verify_url(workspace, &settings);
+    let url = workspace::resolve_verify_url(workspace, settings);
     let brief_path = tools::playhouse_dir(workspace).join("BRIEF.md");
     let score_path = tools::playhouse_dir(workspace).join("reports").join("score.json");
 

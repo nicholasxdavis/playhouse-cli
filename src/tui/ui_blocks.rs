@@ -177,10 +177,10 @@ fn render_tool_call(
     let (icon, status_style) = match status {
         ToolStatus::Running => {
             let spin = spinner::frame(tick);
-            (format!("{spin}"), theme::status_busy())
+            (spin, theme::status_busy())
         }
-        ToolStatus::Success => ("+".to_string(), theme::status_ready()),
-        ToolStatus::Error => ("x".to_string(), theme::status_error()),
+        ToolStatus::Success => ("+", theme::status_ready()),
+        ToolStatus::Error => ("x", theme::status_error()),
     };
 
     let dots = ".".repeat(tick as usize / 10 % 4);
@@ -418,5 +418,71 @@ fn pad_right(s: &str, width: usize) -> String {
         format!("{} ", text_box::truncate(s, width))
     } else {
         format!("{}{} ", s, " ".repeat(width - w))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::score::{CategoryScore, PlayhouseScore};
+
+    #[test]
+    fn render_text_block_wraps_lines() {
+        let block = ContentBlock::text("hello world");
+        let lines = render_block(&block, 40, 0);
+        assert!(!lines.is_empty());
+    }
+
+    #[test]
+    fn render_todo_list_shows_progress() {
+        let items = vec![
+            TodoItem {
+                text: "Step one".into(),
+                status: TodoStatus::Done,
+                detail: None,
+            },
+            TodoItem {
+                text: "Step two".into(),
+                status: TodoStatus::Pending,
+                detail: None,
+            },
+        ];
+        let block = ContentBlock::todo_list("Verify", items);
+        let lines = render_block(&block, 60, 0);
+        let text: String = lines
+            .iter()
+            .flat_map(|l| l.spans.iter().map(|s| s.content.clone()))
+            .collect();
+        assert!(text.contains("Verify"));
+        assert!(text.contains("1/2"));
+    }
+
+    #[test]
+    fn render_score_report_includes_stars() {
+        let score = PlayhouseScore {
+            stars: 100,
+            grade: "Production Ready".into(),
+            grade_emoji: "*****".into(),
+            passed: true,
+            categories: vec![CategoryScore {
+                id: "tools".into(),
+                label: "Toolchain".into(),
+                stars: 100,
+                weight: 0.10,
+                summary: "4/4 tools ready".into(),
+                details: vec![],
+                skipped: false,
+            }],
+            why: vec!["All categories strong".into()],
+            methodology: "test".into(),
+        };
+        let block = ContentBlock::score_report(score, 0, vec![]);
+        let lines = render_block(&block, 80, 100);
+        let text: String = lines
+            .iter()
+            .flat_map(|l| l.spans.iter().map(|s| s.content.clone()))
+            .collect();
+        assert!(text.contains("100 / 100"));
+        assert!(text.contains("Production Ready"));
     }
 }

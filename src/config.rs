@@ -316,10 +316,7 @@ pub fn toggle_config_option(settings: &mut PlayhouseSettings, tab: usize, index:
             2 => settings.arkenar_js_analysis = !settings.arkenar_js_analysis,
             _ => {}
         },
-        4 => match index {
-            0 => settings.stay_on_track_enabled = !settings.stay_on_track_enabled,
-            _ => {}
-        },
+        4 if index == 0 => settings.stay_on_track_enabled = !settings.stay_on_track_enabled,
         _ => {}
     }
     save_settings(settings);

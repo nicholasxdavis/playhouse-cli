@@ -13,6 +13,11 @@ pub fn npm_program() -> &'static str {
     }
 }
 
+fn is_direct_program(program: &str) -> bool {
+    matches!(program, "npm" | "npx" | "node" | "npm.cmd" | "npx.cmd")
+}
+
+#[allow(dead_code)]
 pub fn npx_program() -> &'static str {
     #[cfg(windows)]
     {
@@ -22,10 +27,6 @@ pub fn npx_program() -> &'static str {
     {
         "npx"
     }
-}
-
-fn is_direct_program(program: &str) -> bool {
-    matches!(program, "npm" | "npx" | "node" | "npm.cmd" | "npx.cmd")
 }
 
 pub fn sync(program: &str) -> SyncCommand {

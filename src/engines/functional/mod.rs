@@ -77,16 +77,7 @@ pub async fn run(workspace: &str, json: bool, quiet: bool) -> i32 {
 async fn ensure_runner_tools(workspace: &str, profile: &ProjectProfile) -> Result<(), String> {
     match profile.functional_runner {
         FunctionalRunner::Playwright => install::ensure_playwright(workspace, true).await.map(|_| ()),
-        FunctionalRunner::NpmTest => {
-            if !crate::tools::project_node_bin(workspace, "vitest").is_some()
-                && !crate::tools::has_playwright(workspace)
-            {
-                // npm test may only need project node_modules; no playhouse install required
-                Ok(())
-            } else {
-                Ok(())
-            }
-        }
+        FunctionalRunner::NpmTest => Ok(()),
         _ => Ok(()),
     }
 }
@@ -129,9 +120,7 @@ pub fn resolve_exit_code(
 ) -> i32 {
     if errored {
         5
-    } else if no_tests {
-        1
-    } else if failed > 0 || process_exit != 0 {
+    } else if no_tests || failed > 0 || process_exit != 0 {
         1
     } else {
         0
