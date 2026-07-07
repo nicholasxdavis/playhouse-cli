@@ -5,7 +5,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::tui::app::App;
+use crate::tui::app::{App, SlashCategory, verify_flag_help_lines};
 use crate::tui::theme;
 
 pub fn render(f: &mut Frame, area: Rect, app: &mut App) {
@@ -55,36 +55,37 @@ pub fn render(f: &mut Frame, area: Rect, app: &mut App) {
 }
 
 fn render_commands(f: &mut Frame, sub: Rect, body: Rect, footer: Rect, app: &mut App) {
-    f.render_widget(
-        Paragraph::new(Line::from(Span::styled(
-            "  Browse slash commands - Enter runs the selected command:",
-            theme::text_muted(),
-        ))),
-        sub,
-    );
+    let sub_split = Layout::vertical([Constraint::Length(5), Constraint::Min(2)]).split(sub);
 
-    let items: Vec<ListItem> = app
-        .slash_commands
+    let verify_lines: Vec<Line> = verify_flag_help_lines()
         .iter()
-        .enumerate()
-        .map(|(i, cmd)| {
-            let selected = i == app.help_selected;
-            let marker = if selected { "› " } else { "  " };
-            ListItem::new(Line::from(vec![
-                Span::styled(marker, if selected { theme::accent() } else { theme::text_dim() }),
-                Span::styled(
-                    &cmd.command,
-                    if selected { theme::selected() } else { theme::accent() },
-                ),
-                Span::styled(" - ", theme::text_dim()),
-                Span::styled(&cmd.description, theme::text_muted()),
-            ]))
+        .map(|line| {
+            Line::from(vec![Span::styled(
+                format!("  {line}"),
+                if line.starts_with("  Example") {
+                    theme::text_muted()
+                } else {
+                    theme::accent()
+                },
+            )])
         })
         .collect();
+    f.render_widget(Paragraph::new(verify_lines), sub_split[0]);
+
+    f.render_widget(
+        Paragraph::new(Line::from(Span::styled(
+            "  Slash commands by group — Enter runs the selected command:",
+            theme::text_muted(),
+        ))),
+        sub_split[1],
+    );
+
+    let body_split = Layout::vertical([Constraint::Min(3), Constraint::Length(1)]).split(body);
+    let items = grouped_command_items(app);
 
     let mut state = std::mem::take(&mut app.help_list_state);
     state.select(Some(app.help_selected));
-    f.render_stateful_widget(List::new(items), body, &mut state);
+    f.render_stateful_widget(List::new(items), body_split[0], &mut state);
     app.help_list_state = state;
 
     f.render_widget(
@@ -100,6 +101,35 @@ fn render_commands(f: &mut Frame, sub: Rect, body: Rect, footer: Rect, app: &mut
         ])),
         footer,
     );
+}
+
+fn grouped_command_items(app: &App) -> Vec<ListItem<'static>> {
+    let mut items = Vec::new();
+    let mut last_category: Option<SlashCategory> = None;
+
+    for (i, cmd) in app.slash_commands.iter().enumerate() {
+        if last_category != Some(cmd.category) {
+            items.push(ListItem::new(Line::from(vec![Span::styled(
+                format!("  {} ", cmd.category.label()),
+                theme::accent_bold(),
+            )])));
+            last_category = Some(cmd.category);
+        }
+
+        let selected = i == app.help_selected;
+        let marker = if selected { "› " } else { "  " };
+        items.push(ListItem::new(Line::from(vec![
+            Span::styled(format!("  {marker}"), if selected { theme::accent() } else { theme::text_dim() }),
+            Span::styled(
+                cmd.command.clone(),
+                if selected { theme::selected() } else { theme::accent() },
+            ),
+            Span::styled(" - ", theme::text_dim()),
+            Span::styled(cmd.description.clone(), theme::text_muted()),
+        ])));
+    }
+
+    items
 }
 
 fn render_mentions(f: &mut Frame, sub: Rect, body: Rect, footer: Rect) {
@@ -203,10 +233,10 @@ fn render_engines(f: &mut Frame, sub: Rect, body: Rect, footer: Rect) {
         Line::from(vec![Span::styled("  playhouse agent rules|paths|next-action|plan --json", theme::accent()), Span::styled(" - agent subcommands (TUI: /agent status, …)", theme::text())]),
         Line::from(vec![Span::styled("  playhouse agent handoff --json", theme::accent()), Span::styled(" - verify + export (TUI: /agent handoff)", theme::text())]),
         Line::from(vec![Span::styled("  playhouse config schema --json", theme::accent()), Span::styled(" - settable config keys", theme::text())]),
-        Line::from(vec![Span::styled("  playhouse install", theme::accent()), Span::styled(" - bundled Trivy, Arkenar, Playwright", theme::text())]),
+        Line::from(vec![Span::styled("  playhouse install [--minimal|--full]", theme::accent()), Span::styled(" - bundled Trivy, Arkenar, Playwright (TUI: /install)", theme::text())]),
         Line::from(vec![Span::styled("  playhouse init [--stay-on-track]", theme::accent()), Span::styled(" - set up .playhouse/", theme::text())]),
         Line::from(vec![Span::styled("  playhouse doctor [--resolve] --json", theme::accent()), Span::styled(" - tool health", theme::text())]),
-        Line::from(vec![Span::styled("  playhouse verify [--url URL] --json", theme::accent()), Span::styled(" - full QA suite + Playhouse Stars", theme::text())]),
+        Line::from(vec![Span::styled("  playhouse verify [--url URL] [--test PAT] [--start-server CMD] [--server-port N] --json", theme::accent()), Span::styled(" - full QA + stars (TUI: /verify …)", theme::text())]),
         Line::from(vec![Span::styled("  playhouse status --json", theme::accent()), Span::styled(" - verify progress (TUI: /status)", theme::text())]),
         Line::from(vec![Span::styled("  playhouse score [--url URL] [--last] --json", theme::accent()), Span::styled(" - 0-100 star rating audit", theme::text())]),
         Line::from(vec![Span::styled("  playhouse functional [pattern] --json", theme::accent()), Span::styled(" - detected test runner (preferred)", theme::text())]),
@@ -215,9 +245,12 @@ fn render_engines(f: &mut Frame, sub: Rect, body: Rect, footer: Rect) {
         Line::from(vec![Span::styled("  playhouse arkenar [url] --json", theme::accent()), Span::styled(" - DAST web scan", theme::text())]),
         Line::from(vec![Span::styled("  playhouse trivy --json", theme::accent()), Span::styled(" - security + secrets", theme::text())]),
         Line::from(vec![Span::styled("  playhouse lighthouse [url] --json", theme::accent()), Span::styled(" - performance audit", theme::text())]),
-        Line::from(vec![Span::styled("  playhouse stay-on-track enable", theme::accent()), Span::styled(" - optional .playhouse/stay-on-track/SKILL.md", theme::text())]),
+        Line::from(vec![Span::styled("  playhouse stay-on-track enable", theme::accent()), Span::styled(" - optional .playhouse/stay-on-track/SKILL.md (TUI: /stay-on-track)", theme::text())]),
+        Line::from(vec![Span::styled("  playhouse skill enable", theme::accent()), Span::styled(" - install agent skill (TUI: /skill enable)", theme::text())]),
         Line::from(vec![Span::styled("  playhouse export", theme::accent()), Span::styled(" - write .playhouse/BRIEF.md", theme::text())]),
         Line::from(vec![Span::styled("  playhouse config --json", theme::accent()), Span::styled(" - all settings", theme::text())]),
+        Line::from(""),
+        Line::from(vec![Span::styled("  TUI parity: ", theme::text_muted()), Span::styled("humans can type plain questions (e.g. \"what version?\") or use /commands — agents should stay headless.", theme::text())]),
         Line::from(""),
         Line::from(vec![Span::styled("  Exit codes: ", theme::text_muted()), Span::styled("0=pass 1=fail 3=arkenar 4=trivy 5=run playhouse install", theme::text())]),
     ];
@@ -232,4 +265,33 @@ fn render_engines(f: &mut Frame, sub: Rect, body: Rect, footer: Rect) {
         ])),
         footer,
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tui::app::App;
+
+    fn test_app() -> App {
+        App::new(".", false)
+    }
+
+    #[test]
+    fn grouped_items_include_all_categories() {
+        let app = test_app();
+        let items = grouped_command_items(&app);
+        let text: String = items
+            .iter()
+            .map(|item| format!("{item:?}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        for label in ["QA", "Agent", "Config", "Meta"] {
+            assert!(text.contains(label), "missing category header {label}");
+        }
+    }
+
+    #[test]
+    fn verify_help_lines_not_empty() {
+        assert!(!verify_flag_help_lines()[0].is_empty());
+    }
 }

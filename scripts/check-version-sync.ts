@@ -5,6 +5,12 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+const manifestSource = path.join(root, 'scripts/manifest/release-targets.json');
+const manifestNpm = path.join(
+  root,
+  'packages/playhouse/scripts/lib/release-targets.json',
+);
+
 const cargoToml = fs.readFileSync(path.join(root, 'Cargo.toml'), 'utf8');
 const cargoMatch = cargoToml.match(/^version\s*=\s*"([^"]+)"/m);
 const npmPkg = JSON.parse(
@@ -48,6 +54,23 @@ if (homebrew.includes('REPLACE_ON_RELEASE')) {
   console.warn(
     'Warning: packaging/homebrew/playhouse.rb still has REPLACE_ON_RELEASE sha256 placeholders',
   );
+}
+
+if (!fs.existsSync(manifestSource)) {
+  console.error('Missing scripts/manifest/release-targets.json');
+  failed = true;
+} else if (!fs.existsSync(manifestNpm)) {
+  console.error('Missing packages/playhouse/scripts/lib/release-targets.json');
+  failed = true;
+} else {
+  const source = fs.readFileSync(manifestSource, 'utf8').trim();
+  const npmCopy = fs.readFileSync(manifestNpm, 'utf8').trim();
+  if (source !== npmCopy) {
+    console.error(
+      'release-targets.json out of sync: scripts/manifest vs packages/playhouse/scripts/lib',
+    );
+    failed = true;
+  }
 }
 
 if (failed) {

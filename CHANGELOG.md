@@ -2,17 +2,23 @@
 
 All notable changes to Playhouse CLI are documented here.
 
-## [0.3.3] — unreleased
+## [0.3.3] — 2026-07-06
 
 ### CI
 - Fix verify-smoke: run against `tests/fixtures/rust-app`, fix Trivy 0.72 flags (`--hidden`, `--log-level`) and JSON capture via `--output`
+- Add `validate-release-matrix` CI step; `scripts/` TypeScript typecheck in CI
 
 ### TUI
-- Restore `/version`, `/uninstall`, `/auth login`, `/test` subcommands
-- Natural-language shortcuts: "what version?", "help", "uninstall", etc.
+- `/install --minimal` and `/install --full` (headless parity)
+- `/skill enable` alias; restore `/version`, `/uninstall`, `/auth login`, `/test` subcommands
+- `/help` grouped commands (QA / Agent / Config / Meta) with verify flag reference
+- Natural-language shortcuts: version, install, score, agent handoff, skill, and more
+- Integration tests for agent subcommands, install profiles, config URL validation
 
 ### Tooling
+- Shared `scripts/manifest/release-targets.json` for Homebrew, npm platform map, and release matrix validation
 - Migrate release scripts to TypeScript (`scripts/*.ts` + `tsx`)
+- Trivy engine regression tests for `--output` / `--quiet` flag compatibility
 
 ## [0.3.2] — 2026-07-06
 

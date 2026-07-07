@@ -1,9 +1,11 @@
 # Playhouse QA CLI - Release 0.2 Sign-Off Plan
 
+> **Superseded for v0.3.3+** — use [0.3.3-release-plan.md](./0.3.3-release-plan.md) for current release checklist and agent runbook. This file is kept for historical 0.2 context.
+
 Internal review of issues found during OWASP Juice Shop evaluation and agent workflow testing. Each item is tracked on GitHub and mapped to concrete code changes in this repo.
 
 **Repo:** https://github.com/nicholasxdavis/playhouse-cli  
-**Status:** Release 0.2.0 ready to tag (all issues #2 to #35 closed)
+**Status:** Historical (0.2 era). Release 0.2.0 tagged; see 0.3.x plans for current work.
 
 ---
 

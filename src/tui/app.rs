@@ -4,52 +4,83 @@ use ratatui::layout::Rect;
 use ratatui::widgets::ListState;
 
 use crate::detect;
+use crate::install::InstallProfile;
 use crate::tui::config::{self, PlayhouseSettings};
 use crate::tui::mention::{self, MentionEntry, MentionIndex};
 use crate::tui::selection::{CharRange, LineSelection};
 use crate::tui::ui_blocks::ContentBlock;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum SlashCategory {
+    Qa,
+    Agent,
+    Config,
+    Meta,
+}
+
+impl SlashCategory {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Qa => "QA",
+            Self::Agent => "Agent",
+            Self::Config => "Config",
+            Self::Meta => "Meta",
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct SlashCommand {
     pub command: String,
     pub description: String,
+    pub category: SlashCategory,
+}
+
+pub fn verify_flag_help_lines() -> [&'static str; 4] {
+    [
+        "/verify [URL] [--test PAT] [--start-server CMD] [--port N] [--server-timeout SEC]",
+        "  Headless: playhouse verify [--url URL] [--test PATTERN] [--start-server CMD]",
+        "            [--server-port N] [--server-timeout SEC] --json",
+        "  Example: /verify http://localhost:3000 --start-server \"npm run dev\" --port 3000",
+    ]
 }
 
 pub fn default_slash_commands() -> Vec<SlashCommand> {
-    vec![
-        ("/doctor", "Tool health (/doctor resolve rebuilds native deps)"),
-        ("/install", "Install bundled tools (Trivy, Arkenar, Playwright)"),
-        ("/init", "Initialize .playhouse/ (--no-skill, --stay-on-track)"),
-        ("/verify", "Full QA (/verify [url] --test pat --start-server cmd)"),
-        ("/score", "Star audit (/score last = saved; /score [url] = audit only)"),
-        ("/functional", "Run detected functional test runner"),
-        ("/lighthouse", "Performance & accessibility audit"),
-        ("/playwright", "Browser E2E tests (Playwright only)"),
-        ("/trivy", "Security & secret scan"),
-        ("/arkenar", "DAST web security scan"),
-        ("/status", "Verify progress (when verify is running)"),
-        ("/upgrade", "Check GitHub and npm for updates"),
-        ("/update", "Apply latest Playhouse release"),
-        ("/agents", "Show workspace brief"),
-        ("/agent", "Agent manifest (/agent status, handoff, plan, …)"),
-        ("/skill", "Agent skill (/skill install, disable, status)"),
-        ("/export", "Export .playhouse/BRIEF.md"),
-        ("/stay-on-track", "Stay-on-track skill (enable, disable, status)"),
-        ("/config", "Settings & preferences"),
-        ("/version", "Show Playhouse CLI version and install source"),
-        ("/uninstall", "Remove bundled tools (/uninstall --yes [--global])"),
-        ("/auth", "Audit auth (/auth login --token … [--url URL])"),
-        ("/test", "Test baseplates (/test list|init|add|run)"),
-        ("/help", "Interactive command reference"),
-        ("/clear", "Clear the feed"),
-        ("/quit", "Exit Playhouse"),
-    ]
-    .into_iter()
-    .map(|(c, d)| SlashCommand {
-        command: c.into(),
-        description: d.into(),
-    })
-    .collect()
+    let cmds: [(&str, &str, SlashCategory); 26] = [
+        ("/doctor", "Tool health (/doctor resolve rebuilds native deps)", SlashCategory::Qa),
+        ("/install", "Install bundled tools (/install --minimal | --full)", SlashCategory::Qa),
+        ("/init", "Initialize .playhouse/ (--no-skill, --stay-on-track)", SlashCategory::Qa),
+        ("/verify", "Full QA (/verify [url] --test pat --start-server cmd)", SlashCategory::Qa),
+        ("/score", "Star audit (/score last = saved; /score [url] = audit only)", SlashCategory::Qa),
+        ("/functional", "Run detected functional test runner", SlashCategory::Qa),
+        ("/lighthouse", "Performance & accessibility audit", SlashCategory::Qa),
+        ("/playwright", "Browser E2E tests (Playwright only)", SlashCategory::Qa),
+        ("/trivy", "Security & secret scan", SlashCategory::Qa),
+        ("/arkenar", "DAST web security scan", SlashCategory::Qa),
+        ("/status", "Verify progress (when verify is running)", SlashCategory::Qa),
+        ("/test", "Test baseplates (/test list|init|add|run)", SlashCategory::Qa),
+        ("/agents", "Show workspace brief", SlashCategory::Agent),
+        ("/agent", "Agent manifest (/agent status, handoff, plan, …)", SlashCategory::Agent),
+        ("/skill", "Agent skill (/skill enable|install, disable, status)", SlashCategory::Agent),
+        ("/export", "Export .playhouse/BRIEF.md", SlashCategory::Agent),
+        ("/stay-on-track", "Stay-on-track skill (enable, disable, status)", SlashCategory::Agent),
+        ("/config", "Settings & preferences (/config set KEY VALUE)", SlashCategory::Config),
+        ("/auth", "Audit auth (/auth login --token … [--url URL])", SlashCategory::Config),
+        ("/uninstall", "Remove bundled tools (/uninstall --yes [--global])", SlashCategory::Config),
+        ("/version", "Show Playhouse CLI version and install source", SlashCategory::Meta),
+        ("/upgrade", "Check GitHub and npm for updates", SlashCategory::Meta),
+        ("/update", "Apply latest Playhouse release", SlashCategory::Meta),
+        ("/help", "Interactive command reference", SlashCategory::Meta),
+        ("/clear", "Clear the feed", SlashCategory::Meta),
+        ("/quit", "Exit Playhouse", SlashCategory::Meta),
+    ];
+    cmds.into_iter()
+        .map(|(c, d, category)| SlashCommand {
+            command: c.into(),
+            description: d.into(),
+            category,
+        })
+        .collect()
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -94,7 +125,7 @@ impl VerifyParams {
 #[derive(Debug, Clone)]
 pub enum TaskKind {
     Doctor { resolve: bool },
-    Install,
+    Install { profile: InstallProfile },
     Init {
         stay_on_track: bool,
         no_skill: bool,

@@ -44,8 +44,8 @@ pub fn spawn_task(
                 let r = run_doctor(&workspace_path, resolve, tx.clone()).await;
                 (r.0, r.1, r.2, r.3)
             }
-            TaskKind::Install => {
-                let r = run_install(&workspace_path, tx.clone()).await;
+            TaskKind::Install { profile } => {
+                let r = run_install(&workspace_path, profile, tx.clone()).await;
                 (r.0, r.1, r.2, None)
             }
             TaskKind::Init {
@@ -101,7 +101,14 @@ pub fn spawn_task(
 fn task_label(kind: &TaskKind) -> String {
     match kind {
         TaskKind::Doctor { .. } => "Checking tools…".into(),
-        TaskKind::Install => "Installing Playwright, Trivy, Arkenar…".into(),
+        TaskKind::Install { profile } => match profile {
+            crate::install::InstallProfile::Minimal => {
+                "Installing Trivy and Arkenar…".into()
+            }
+            crate::install::InstallProfile::Full => {
+                "Installing Playwright, Trivy, Arkenar…".into()
+            }
+        },
         TaskKind::Init { .. } => "Initializing workspace…".into(),
         TaskKind::Verify { .. } => "Verify · QA Suite".into(),
         TaskKind::Score { .. } => "Playhouse Stars · score audit".into(),
@@ -408,13 +415,21 @@ async fn run_handoff_task(
     (blocks, success, summary)
 }
 
-async fn run_install(workspace: &str, tx: mpsc::UnboundedSender<TaskEvent>) -> (Vec<ContentBlock>, bool, String) {
+async fn run_install(
+    workspace: &str,
+    profile: crate::install::InstallProfile,
+    tx: mpsc::UnboundedSender<TaskEvent>,
+) -> (Vec<ContentBlock>, bool, String) {
+    let profile_label = profile.as_str();
     send_progress(
         &tx,
         "Installing bundled tools…",
-        vec![ContentBlock::tool_running("Install", "Installing Trivy, Playwright, Arkenar…")],
+        vec![ContentBlock::tool_running(
+            "Install",
+            format!("Profile: {profile_label} — installing bundled tools…"),
+        )],
     );
-    let report = install::ensure_all(workspace, true).await;
+    let report = install::ensure_profile(workspace, profile, true).await;
     let ok = report.errors.is_empty();
     let mut items = Vec::new();
     items.push(TodoItem {
@@ -424,30 +439,6 @@ async fn run_install(workspace: &str, tx: mpsc::UnboundedSender<TaskEvent>) -> (
         ),
         status: TodoStatus::Done,
         detail: if report.trivy {
-            None
-        } else {
-            Some("installation failed".into())
-        },
-    });
-    items.push(TodoItem {
-        text: format!(
-            "Playwright — {}",
-            if report.playwright { "installed" } else { "failed" }
-        ),
-        status: TodoStatus::Done,
-        detail: if report.playwright {
-            None
-        } else {
-            Some("installation failed".into())
-        },
-    });
-    items.push(TodoItem {
-        text: format!(
-            "Lighthouse — {}",
-            if report.lighthouse { "installed" } else { "failed" }
-        ),
-        status: TodoStatus::Done,
-        detail: if report.lighthouse {
             None
         } else {
             Some("installation failed".into())
@@ -465,6 +456,32 @@ async fn run_install(workspace: &str, tx: mpsc::UnboundedSender<TaskEvent>) -> (
             Some("installation failed".into())
         },
     });
+    if profile == crate::install::InstallProfile::Full {
+        items.push(TodoItem {
+            text: format!(
+                "Playwright — {}",
+                if report.playwright { "installed" } else { "failed" }
+            ),
+            status: TodoStatus::Done,
+            detail: if report.playwright {
+                None
+            } else {
+                Some("installation failed".into())
+            },
+        });
+        items.push(TodoItem {
+            text: format!(
+                "Lighthouse — {}",
+                if report.lighthouse { "installed" } else { "failed" }
+            ),
+            status: TodoStatus::Done,
+            detail: if report.lighthouse {
+                None
+            } else {
+                Some("installation failed".into())
+            },
+        });
+    }
     let summary = if ok {
         "Install complete".into()
     } else {

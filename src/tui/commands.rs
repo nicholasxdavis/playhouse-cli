@@ -5,6 +5,7 @@ use crate::auth;
 use crate::baseplates;
 use crate::config_cli;
 use crate::detect;
+use crate::install::InstallProfile;
 use crate::project;
 use crate::score;
 use crate::tui::app::{App, AppMode, FeedRole, TaskKind, VerifyParams};
@@ -46,7 +47,13 @@ pub fn execute_command(app: &mut App, command: &str, task_tx: &mpsc::UnboundedSe
                 .is_some_and(|s| s.eq_ignore_ascii_case("resolve"));
             start_task(app, task_tx, TaskKind::Doctor { resolve });
         }
-        "/install" => start_task(app, task_tx, TaskKind::Install),
+        "/install" => start_task(
+            app,
+            task_tx,
+            TaskKind::Install {
+                profile: parse_install_profile(&parts),
+            },
+        ),
         "/init" => start_task(
             app,
             task_tx,
@@ -188,17 +195,7 @@ pub fn execute_command(app: &mut App, command: &str, task_tx: &mpsc::UnboundedSe
                     }
                 ));
             }
-            _ => match workspace::install_playhouse_skill(&app.workspace, &app.settings) {
-                Ok(path) => {
-                    app.settings.playhouse_skill_enabled = true;
-                    config::save_settings(&app.settings);
-                    app.push_system(&format!(
-                        "Playhouse agent skill installed at {}\nRecommended: agents read .playhouse/SKILL.md first.",
-                        path.display()
-                    ));
-                }
-                Err(e) => app.push_system(&format!("Playhouse skill failed: {e}")),
-            },
+            _ => install_playhouse_skill(app),
         },
         "/export" => match app.export_brief() {
             Ok(path) => app.push_system(&format!("Exported workspace brief to {}", path.display())),
@@ -294,7 +291,7 @@ pub fn execute_command(app: &mut App, command: &str, task_tx: &mpsc::UnboundedSe
 }
 
 /// Map common plain-text questions to slash commands (TUI-friendly).
-fn natural_to_slash(text: &str) -> Option<String> {
+pub fn natural_to_slash(text: &str) -> Option<String> {
     let normalized = text
         .trim()
         .trim_end_matches('?')
@@ -308,6 +305,21 @@ fn natural_to_slash(text: &str) -> Option<String> {
         "help" | "commands" | "what can you do" => Some("/help".into()),
         "doctor" | "health" | "tool health" => Some("/doctor".into()),
         "verify" | "run verify" | "full verify" => Some("/verify".into()),
+        "install" | "install tools" => Some("/install".into()),
+        "score" | "stars" | "playhouse stars" => Some("/score".into()),
+        "init" | "initialize" | "setup workspace" => Some("/init".into()),
+        "status" | "verify status" => Some("/status".into()),
+        "agent" | "manifest" => Some("/agent status".into()),
+        "handoff" | "agent handoff" => Some("/agent handoff".into()),
+        "skill" | "install skill" => Some("/skill enable".into()),
+        "trivy" | "security scan" => Some("/trivy".into()),
+        "lighthouse" | "performance" => Some("/lighthouse".into()),
+        "playwright" => Some("/playwright".into()),
+        "functional" | "run tests" | "tests" => Some("/functional".into()),
+        "arkenar" | "dast" => Some("/arkenar".into()),
+        "export" | "export brief" => Some("/export".into()),
+        "config" | "settings" => Some("/config".into()),
+        "clear" => Some("/clear".into()),
         "uninstall" | "remove tools" | "remove playhouse tools" => {
             Some("/uninstall".into())
         }
@@ -445,6 +457,28 @@ fn lighthouse_url(app: &App, explicit: Option<&str>) -> String {
         .unwrap_or_else(|| "http://localhost:3000".to_string())
 }
 
+fn install_playhouse_skill(app: &mut App) {
+    match workspace::install_playhouse_skill(&app.workspace, &app.settings) {
+        Ok(path) => {
+            app.settings.playhouse_skill_enabled = true;
+            config::save_settings(&app.settings);
+            app.push_system(&format!(
+                "Playhouse agent skill installed at {}\nRecommended: agents read .playhouse/SKILL.md first.",
+                path.display()
+            ));
+        }
+        Err(e) => app.push_system(&format!("Playhouse skill failed: {e}")),
+    }
+}
+
+fn parse_install_profile(parts: &[&str]) -> InstallProfile {
+    if parts.contains(&"--minimal") {
+        InstallProfile::Minimal
+    } else {
+        InstallProfile::Full
+    }
+}
+
 fn push_json(app: &mut App, value: &impl serde::Serialize) {
     let text = serde_json::to_string_pretty(value).unwrap_or_default();
     app.push_blocks(FeedRole::System, vec![ContentBlock::code(text)]);
@@ -468,7 +502,10 @@ pub fn slash_label(kind: &TaskKind) -> String {
                 "/doctor".into()
             }
         }
-        TaskKind::Install => "/install".into(),
+        TaskKind::Install { profile } => match profile {
+            InstallProfile::Minimal => "/install --minimal".into(),
+            InstallProfile::Full => "/install".into(),
+        },
         TaskKind::Init { .. } => "/init".into(),
         TaskKind::Verify { params } => {
             if let Some(u) = &params.url {
@@ -503,9 +540,34 @@ mod tests {
     use super::*;
 
     #[test]
+    fn parse_install_profile_flags() {
+        assert_eq!(
+            parse_install_profile(&["/install", "--minimal"]),
+            InstallProfile::Minimal
+        );
+        assert_eq!(
+            parse_install_profile(&["/install", "--full"]),
+            InstallProfile::Full
+        );
+        assert_eq!(parse_install_profile(&["/install"]), InstallProfile::Full);
+    }
+
+    #[test]
     fn slash_labels_match_commands() {
         assert_eq!(slash_label(&TaskKind::Doctor { resolve: false }), "/doctor");
         assert_eq!(slash_label(&TaskKind::Doctor { resolve: true }), "/doctor resolve");
+        assert_eq!(
+            slash_label(&TaskKind::Install {
+                profile: InstallProfile::Minimal
+            }),
+            "/install --minimal"
+        );
+        assert_eq!(
+            slash_label(&TaskKind::Install {
+                profile: InstallProfile::Full
+            }),
+            "/install"
+        );
         assert_eq!(slash_label(&TaskKind::Functional { pattern: None }), "/functional");
         assert_eq!(
             slash_label(&TaskKind::Handoff {
@@ -565,9 +627,12 @@ mod tests {
     }
 
     #[test]
-    fn natural_to_slash_maps_version_questions() {
+    fn natural_to_slash_maps_common_phrases() {
         assert_eq!(natural_to_slash("what version?"), Some("/version".into()));
         assert_eq!(natural_to_slash("help"), Some("/help".into()));
+        assert_eq!(natural_to_slash("install tools"), Some("/install".into()));
+        assert_eq!(natural_to_slash("agent handoff"), Some("/agent handoff".into()));
+        assert_eq!(natural_to_slash("stars"), Some("/score".into()));
         assert_eq!(natural_to_slash("random note"), None);
     }
 }

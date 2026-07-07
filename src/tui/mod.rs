@@ -118,7 +118,13 @@ async fn run_inner(workspace: &str) -> io::Result<()> {
             task_tx.clone(),
         );
     } else if app.settings.auto_install_tools {
-        spawn_task(TaskKind::Install, app.workspace.clone(), task_tx.clone());
+        spawn_task(
+            TaskKind::Install {
+                profile: crate::install::InstallProfile::Full,
+            },
+            app.workspace.clone(),
+            task_tx.clone(),
+        );
     }
 
     loop {

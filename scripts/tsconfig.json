@@ -4,9 +4,9 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "strict": true,
-    "skipLibCheck": true,
     "noEmit": true,
-    "types": ["node"]
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
   },
-  "include": ["*.ts"]
+  "include": ["*.ts", "lib/**/*.ts"]
 }

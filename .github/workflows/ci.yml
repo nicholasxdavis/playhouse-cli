@@ -27,6 +27,10 @@ jobs:
         run: npm ci --prefix scripts
       - name: Cargo.toml npm version sync
         run: npm run check-version-sync --prefix scripts
+      - name: Release matrix matches manifest
+        run: npm run validate-release-matrix --prefix scripts
+      - name: TypeScript typecheck (scripts)
+        run: npm run typecheck --prefix scripts
 
   rust:
     needs: version-sync

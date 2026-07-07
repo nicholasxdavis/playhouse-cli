@@ -6,7 +6,9 @@ recommended: true
 
 # Playhouse Agent Skill
 
-Headless QA CLI for security, functional tests, performance, and agent handoff. Do not use the TUI (`playhouse` with no args).
+Headless QA CLI for security, functional tests, performance, and agent handoff. Do not use the TUI (`playhouse` with no args) unless a human explicitly asked for it.
+
+**TUI parity (humans):** The interactive TUI supports slash commands (`/verify`, `/install --minimal`, `/skill enable`, …) and plain-text shortcuts (`what version?`, `install tools`, `agent handoff`). Agents should still use headless `--json` commands below.
 
 **Live manifest:** `playhouse agent --json` (commands, settings, nextActions). Prefer that over this file when they differ.
 

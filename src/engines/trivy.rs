@@ -174,26 +174,13 @@ async fn run_trivy_pass(
     cache_dir: &Path,
     skip_dirs: &[String],
 ) -> Result<(Value, i32), String> {
-    let report_path = std::env::temp_dir().join(format!("playhouse-trivy-{}.json", std::process::id()));
+    let report_path =
+        std::env::temp_dir().join(format!("playhouse-trivy-{}.json", std::process::id()));
     let mut cmd = async_cmd(trivy);
-    cmd.args([
-        "fs",
-        "--scanners",
-        "vuln,secret",
-        "--severity",
-        severity,
-        "--format",
-        "json",
-        "--quiet",
-        "--cache-dir",
-        &cache_dir.to_string_lossy(),
-        "--output",
-        &report_path.to_string_lossy(),
-    ]);
-    for dir in skip_dirs {
-        cmd.arg("--skip-dirs").arg(dir);
+    for arg in build_trivy_fs_args(severity, cache_dir, skip_dirs, &report_path, target) {
+        cmd.arg(arg);
     }
-    cmd.arg(target).current_dir(scan_dir);
+    cmd.current_dir(scan_dir);
 
     let out = crate::cmd::output_with_timeout(&mut cmd)
         .await
@@ -212,14 +199,45 @@ async fn run_trivy_pass(
     })?;
     let _ = std::fs::remove_file(&report_path);
 
+    parse_trivy_json(&json_text).map(|data| (data, tool_exit))
+}
+
+/// Build `trivy fs` arguments. Uses `--output` + `--quiet` (Trivy 0.72+); never `--hidden` or `--log-level`.
+fn build_trivy_fs_args(
+    severity: &str,
+    cache_dir: &Path,
+    skip_dirs: &[String],
+    output_path: &Path,
+    target: &str,
+) -> Vec<String> {
+    let mut args = vec![
+        "fs".into(),
+        "--scanners".into(),
+        "vuln,secret".into(),
+        "--severity".into(),
+        severity.into(),
+        "--format".into(),
+        "json".into(),
+        "--quiet".into(),
+        "--cache-dir".into(),
+        cache_dir.to_string_lossy().into_owned(),
+        "--output".into(),
+        output_path.to_string_lossy().into_owned(),
+    ];
+    for dir in skip_dirs {
+        args.push("--skip-dirs".into());
+        args.push(dir.clone());
+    }
+    args.push(target.into());
+    args
+}
+
+fn parse_trivy_json(json_text: &str) -> Result<Value, String> {
     let json_text = json_text.trim();
     if json_text.is_empty() {
         return Err("trivy returned empty output".into());
     }
-
-    let data: Value =
-        serde_json::from_str(json_text).map_err(|e| format!("failed to parse trivy JSON: {e}"))?;
-    Ok((data, tool_exit))
+    serde_json::from_str(json_text).map_err(|e| format!("failed to parse trivy JSON: {e}"))
 }
 
 pub fn count_findings(data: &Value) -> (u64, u64) {
@@ -246,5 +264,77 @@ fn merge_pm_audit_warning(data: &mut Value, pm_count: u64) {
             "PmAuditFindings".into(),
             json!({ "count": pm_count, "source": "package-manager-audit" }),
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    const FIXTURE_JSON: &str = r#"{
+        "SchemaVersion": 2,
+        "Results": [
+            {
+                "Target": "Cargo.lock",
+                "Class": "lang-pkgs",
+                "Vulnerabilities": [
+                    {
+                        "VulnerabilityID": "CVE-2024-0001",
+                        "Severity": "HIGH"
+                    }
+                ]
+            },
+            {
+                "Target": "config.env",
+                "Class": "secret",
+                "Secrets": [
+                    {
+                        "RuleID": "aws-access-key-id",
+                        "Severity": "CRITICAL"
+                    }
+                ]
+            }
+        ]
+    }"#;
+
+    #[test]
+    fn trivy_fs_args_use_output_not_deprecated_flags() {
+        let cache = PathBuf::from("/tmp/trivy-cache");
+        let output = PathBuf::from("/tmp/playhouse-trivy-out.json");
+        let args = build_trivy_fs_args("HIGH,CRITICAL", &cache, &["node_modules".into()], &output, ".");
+
+        assert!(args.contains(&"--output".into()));
+        assert!(args.contains(&"--quiet".into()));
+        assert!(args.contains(&"json".into()));
+        assert!(!args.iter().any(|a| a == "--hidden"));
+        assert!(!args.iter().any(|a| a == "--log-level"));
+        assert!(args.contains(&"--skip-dirs".into()));
+        assert!(args.contains(&"node_modules".into()));
+    }
+
+    #[test]
+    fn parse_trivy_fixture_json() {
+        let data = parse_trivy_json(FIXTURE_JSON).expect("fixture should parse");
+        assert!(data.get("Results").and_then(|r| r.as_array()).is_some());
+    }
+
+    #[test]
+    fn parse_trivy_json_rejects_empty() {
+        assert!(parse_trivy_json("  ").is_err());
+    }
+
+    #[test]
+    fn count_findings_from_fixture() {
+        let data = parse_trivy_json(FIXTURE_JSON).unwrap();
+        let (vulns, secrets) = count_findings(&data);
+        assert_eq!(vulns, 1);
+        assert_eq!(secrets, 1);
+    }
+
+    #[test]
+    fn count_findings_empty_results() {
+        let data = json!({ "Results": [] });
+        assert_eq!(count_findings(&data), (0, 0));
     }
 }

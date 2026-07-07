@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "check-version-sync": "tsx check-version-sync.ts",
-    "update-homebrew-formula": "tsx update-homebrew-formula.ts"
+    "update-homebrew-formula": "tsx update-homebrew-formula.ts",
+    "validate-release-matrix": "tsx validate-release-matrix.ts",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

@@ -1,46 +1,31 @@
 'use strict';
 
+const fs = require('node:fs');
+const path = require('node:path');
+
 /**
  * Map Node platform/arch to Rust release target triple and archive layout.
- * Must stay in sync with .github/workflows/release.yml asset names.
+ * Data source: scripts/manifest/release-targets.json (copied here for npm publish).
  */
+const manifest = JSON.parse(
+  fs.readFileSync(path.join(__dirname, 'release-targets.json'), 'utf8'),
+);
+
 function getReleaseTarget() {
   const { platform, arch } = process;
 
-  if (platform === 'win32' && arch === 'x64') {
-    return {
-      triple: 'x86_64-pc-windows-msvc',
-      ext: 'zip',
-      binName: 'playhouse.exe',
-    };
-  }
-  if (platform === 'linux' && arch === 'x64') {
-    return {
-      triple: 'x86_64-unknown-linux-gnu',
-      ext: 'tar.gz',
-      binName: 'playhouse',
-    };
-  }
-  if (platform === 'linux' && arch === 'arm64') {
-    return {
-      triple: 'aarch64-unknown-linux-gnu',
-      ext: 'tar.gz',
-      binName: 'playhouse',
-    };
-  }
-  if (platform === 'darwin' && arch === 'x64') {
-    return {
-      triple: 'x86_64-apple-darwin',
-      ext: 'tar.gz',
-      binName: 'playhouse',
-    };
-  }
-  if (platform === 'darwin' && arch === 'arm64') {
-    return {
-      triple: 'aarch64-apple-darwin',
-      ext: 'tar.gz',
-      binName: 'playhouse',
-    };
+  for (const target of manifest.targets) {
+    if (
+      target.npm &&
+      target.npm.platform === platform &&
+      target.npm.arch === arch
+    ) {
+      return {
+        triple: target.triple,
+        ext: target.archive,
+        binName: target.binName,
+      };
+    }
   }
 
   throw new Error(

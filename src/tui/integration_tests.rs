@@ -143,22 +143,68 @@ fn help_menu_escape_returns_normal() {
 }
 
 #[test]
-fn slash_commands_include_v030_wiring() {
+fn slash_commands_include_all_wired_commands() {
     let app = test_app();
     let cmds: Vec<&str> = app.slash_commands.iter().map(|c| c.command.as_str()).collect();
     for expected in [
+        "/doctor",
+        "/install",
+        "/init",
+        "/verify",
+        "/score",
         "/functional",
+        "/lighthouse",
+        "/playwright",
+        "/trivy",
+        "/arkenar",
         "/status",
+        "/test",
+        "/agents",
+        "/agent",
+        "/skill",
+        "/export",
+        "/stay-on-track",
+        "/config",
+        "/auth",
+        "/uninstall",
+        "/version",
         "/upgrade",
         "/update",
-        "/agent",
-        "/version",
-        "/uninstall",
-        "/auth",
-        "/test",
+        "/help",
+        "/clear",
+        "/quit",
     ] {
         assert!(cmds.contains(&expected), "missing slash command {expected}");
     }
+}
+
+#[test]
+fn slash_commands_grouped_by_category() {
+    let app = test_app();
+    let mut last: Option<crate::tui::app::SlashCategory> = None;
+    for cmd in &app.slash_commands {
+        if let Some(prev) = last {
+            assert!(
+                cmd.category >= prev,
+                "commands not grouped: {} before {}",
+                cmd.command,
+                prev.label()
+            );
+        }
+        last = Some(cmd.category);
+    }
+}
+
+#[test]
+fn config_set_rejects_invalid_url_in_feed() {
+    let mut app = test_app();
+    let tx = noop_task_tx();
+    execute_command(&mut app, "/config set default_url not-a-url", &tx);
+    let msg = last_system_text(&app).unwrap_or_default();
+    assert!(
+        msg.contains("Config set failed") || msg.contains("http"),
+        "expected URL validation error, got: {msg}"
+    );
 }
 
 fn feed_json_contains(app: &App, needle: &str) -> bool {
@@ -210,6 +256,55 @@ fn execute_agent_status_emits_json() {
     let tx = noop_task_tx();
     execute_command(&mut app, "/agent status", &tx);
     assert!(feed_json_contains(&app, "nextActions") || feed_json_contains(&app, "workspace"));
+}
+
+#[test]
+fn execute_agent_rules_emits_json() {
+    let mut app = test_app();
+    let tx = noop_task_tx();
+    execute_command(&mut app, "/agent rules", &tx);
+    assert!(feed_json_contains(&app, "readOrder") || feed_json_contains(&app, "workflow"));
+}
+
+#[test]
+fn execute_agent_paths_emits_json() {
+    let mut app = test_app();
+    let tx = noop_task_tx();
+    execute_command(&mut app, "/agent paths", &tx);
+    assert!(feed_json_contains(&app, "paths") || feed_json_contains(&app, "workspace"));
+}
+
+#[test]
+fn execute_agent_next_action_emits_json() {
+    let mut app = test_app();
+    let tx = noop_task_tx();
+    execute_command(&mut app, "/agent next-action", &tx);
+    assert!(feed_json_contains(&app, "command") || feed_json_contains(&app, "nextAction"));
+}
+
+#[tokio::test]
+async fn execute_install_minimal_queues_task() {
+    let mut app = test_app();
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    execute_command(&mut app, "/install --minimal", &tx);
+    assert!(app.feed.iter().any(|e| e.role == FeedRole::User));
+    let event = tokio::time::timeout(std::time::Duration::from_secs(10), rx.recv())
+        .await
+        .expect("install task did not start in time")
+        .expect("task channel closed");
+    assert!(matches!(event, TaskEvent::Started { .. }));
+}
+
+#[test]
+fn execute_skill_enable_installs() {
+    let mut app = test_app();
+    let tx = noop_task_tx();
+    execute_command(&mut app, "/skill enable", &tx);
+    let msg = last_system_text(&app).unwrap_or_default();
+    assert!(
+        msg.contains("skill installed") || msg.contains("Playhouse agent skill"),
+        "unexpected message: {msg}"
+    );
 }
 
 #[tokio::test]

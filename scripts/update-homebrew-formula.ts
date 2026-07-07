@@ -3,16 +3,16 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  assetName,
+  homebrewTargets,
+  loadReleaseTargets,
+} from './lib/release-targets.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const artifactsDir = process.argv[2]
   ? path.resolve(process.argv[2])
   : path.join(root, 'artifacts');
-
-interface PlatformSpec {
-  target: string;
-  asset: string;
-}
 
 const cargoToml = fs.readFileSync(path.join(root, 'Cargo.toml'), 'utf8');
 const versionMatch = cargoToml.match(/^version\s*=\s*"([^"]+)"/m);
@@ -23,25 +23,8 @@ if (!versionMatch) {
 
 const version = versionMatch[1];
 const tag = `v${version}`;
-
-const specs: PlatformSpec[] = [
-  {
-    target: 'aarch64-apple-darwin',
-    asset: `playhouse-${version}-aarch64-apple-darwin.tar.gz`,
-  },
-  {
-    target: 'x86_64-apple-darwin',
-    asset: `playhouse-${version}-x86_64-apple-darwin.tar.gz`,
-  },
-  {
-    target: 'aarch64-unknown-linux-gnu',
-    asset: `playhouse-${version}-aarch64-unknown-linux-gnu.tar.gz`,
-  },
-  {
-    target: 'x86_64-unknown-linux-gnu',
-    asset: `playhouse-${version}-x86_64-unknown-linux-gnu.tar.gz`,
-  },
-];
+const manifest = loadReleaseTargets();
+const specs = homebrewTargets(manifest);
 
 function sha256(filePath: string): string {
   const data = fs.readFileSync(filePath);
@@ -60,13 +43,20 @@ function findAsset(name: string): string | null {
 
 const hashes: Record<string, string> = {};
 for (const spec of specs) {
-  const file = findAsset(spec.asset);
+  const name = assetName(version, spec.triple, spec.archive);
+  const file = findAsset(name);
   if (!file) {
-    console.error(`Missing artifact: ${spec.asset} in ${artifactsDir}`);
+    console.error(`Missing artifact: ${name} in ${artifactsDir}`);
     process.exit(1);
   }
-  hashes[spec.target] = sha256(file);
-  console.log(`${spec.asset}: ${hashes[spec.target]}`);
+  hashes[spec.triple] = sha256(file);
+  console.log(`${name}: ${hashes[spec.triple]}`);
+}
+
+function brewBlock(triple: string, archive: string): string {
+  const name = assetName(version, triple, archive);
+  return `      url 'https://github.com/nicholasxdavis/playhouse-cli/releases/download/${tag}/${name}'
+      sha256 '${hashes[triple]}'`;
 }
 
 const formulaPath = path.join(root, 'packaging/homebrew/playhouse.rb');
@@ -83,23 +73,19 @@ class Playhouse < Formula
 
   on_macos do
     on_arm do
-      url 'https://github.com/nicholasxdavis/playhouse-cli/releases/download/${tag}/playhouse-${version}-aarch64-apple-darwin.tar.gz'
-      sha256 '${hashes['aarch64-apple-darwin']}'
+${brewBlock('aarch64-apple-darwin', 'tar.gz')}
     end
     on_intel do
-      url 'https://github.com/nicholasxdavis/playhouse-cli/releases/download/${tag}/playhouse-${version}-x86_64-apple-darwin.tar.gz'
-      sha256 '${hashes['x86_64-apple-darwin']}'
+${brewBlock('x86_64-apple-darwin', 'tar.gz')}
     end
   end
 
   on_linux do
     on_arm do
-      url 'https://github.com/nicholasxdavis/playhouse-cli/releases/download/${tag}/playhouse-${version}-aarch64-unknown-linux-gnu.tar.gz'
-      sha256 '${hashes['aarch64-unknown-linux-gnu']}'
+${brewBlock('aarch64-unknown-linux-gnu', 'tar.gz')}
     end
     on_intel do
-      url 'https://github.com/nicholasxdavis/playhouse-cli/releases/download/${tag}/playhouse-${version}-x86_64-unknown-linux-gnu.tar.gz'
-      sha256 '${hashes['x86_64-unknown-linux-gnu']}'
+${brewBlock('x86_64-unknown-linux-gnu', 'tar.gz')}
     end
   end
 
