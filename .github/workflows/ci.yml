@@ -151,20 +151,20 @@ jobs:
       - name: Install minimal bundled tools
         shell: bash
         env:
-          PH_BIN: ${{ matrix.bin }}
+          PH_BIN: ${{ github.workspace }}/${{ matrix.bin }}
         working-directory: tests/fixtures/rust-app
         run: '"$PH_BIN" install --minimal --json'
 
       - name: Verify fixture workspace
         shell: bash
         env:
-          PH_BIN: ${{ matrix.bin }}
+          PH_BIN: ${{ github.workspace }}/${{ matrix.bin }}
         working-directory: tests/fixtures/rust-app
         run: '"$PH_BIN" verify --json'
 
       - name: Functional fixture smoke
         shell: bash
         env:
-          PH_BIN: ${{ matrix.bin }}
+          PH_BIN: ${{ github.workspace }}/${{ matrix.bin }}
         working-directory: tests/fixtures/rust-app
         run: '"$PH_BIN" functional --json'
